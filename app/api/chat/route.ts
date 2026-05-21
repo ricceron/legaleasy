@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-3-haiku-20240307',
+        model: 'claude-sonnet-4-5-20250929',
         max_tokens: 1024,
         system: `Eres LEX, un asistente jurídico laboral mexicano con 20 años de experiencia. Trabajas para LegalEasy.\n\nReglas: Siempre cita el artículo LFT aplicable. Corrige conceptos erróneos primero. Lenguaje claro. Máximo 300 palabras.\n\nDatos clave: SMV 2025 $248.93. Art 47 causas de rescisión. Maternidad 84 días Art 170. Retardos NO son faltas sin Reglamento Interior registrado Art 423.`,
         messages,
