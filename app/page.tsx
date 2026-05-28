@@ -7,7 +7,7 @@ type Section = 'lex' | 'docs' | 'historial' | 'config';
 export default function LexByte() {
   const [section, setSection] = useState<Section>('lex');
   const [msgs, setMsgs] = useState<Msg[]>([
-    { role: 'assistant', content: '¡Bienvenido a **LexByte**! Soy **Lex**, tu asistente jurídico laboral especializado en la Ley Federal del Trabajo.\n\nPuedo ayudarte con contratos, rescisiones, actas, incapacidades, finiquitos y más.\n\n¿Qué necesitas saber hoy?' }
+    { role: 'assistant', content: '¡Bienvenido a **LexByte**! Soy **Lex**, tu asistente jurídico laboral especializado en la Ley Federal del Trabajo y legislación laboral mexicana.\n\nPuedo ayudarte con contratos, rescisiones, actas, incapacidades, finiquitos, obligaciones IMSS, INFONAVIT y más.\n\n¿Qué necesitas saber hoy?' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -43,7 +43,14 @@ export default function LexByte() {
   };
 
   const fmt = (t: string) => t
+    .replace(/^### (.*$)/gim, '<span style="display:block;font-size:13px;font-weight:700;color:rgba(255,255,255,0.9);margin-top:8px;margin-bottom:4px">$1</span>')
+    .replace(/^## (.*$)/gim, '<span style="display:block;font-size:14px;font-weight:700;color:#39ff14;margin-top:10px;margin-bottom:4px">$1</span>')
+    .replace(/^# (.*$)/gim, '<span style="display:block;font-size:15px;font-weight:800;color:#39ff14;margin-top:10px;margin-bottom:6px">$1</span>')
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em style="color:rgba(255,255,255,0.8)">$1</em>')
+    .replace(/^- (.*$)/gim, '<span style="display:block;padding-left:12px;margin-top:3px">• $1</span>')
+    .replace(/✅/g, '<span style="color:#39ff14">✅</span>')
+    .replace(/⚠️/g, '<span style="color:#facc15">⚠️</span>')
     .replace(/\n/g, '<br>');
 
   const sugs = [
@@ -81,7 +88,6 @@ export default function LexByte() {
 
       <div style={{ display:'flex', height:'100vh', background:'#060f1e', fontFamily:"'Sora',sans-serif", overflow:'hidden' }}>
 
-        {/* SIDEBAR */}
         <div style={{ width:230, flexShrink:0, background:'#080f1c', borderRight:'0.5px solid rgba(57,255,20,0.1)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
           <div style={{ padding:'20px 16px 16px', borderBottom:'0.5px solid rgba(57,255,20,0.08)' }}>
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -116,15 +122,20 @@ export default function LexByte() {
           </div>
         </div>
 
-        {/* MAIN */}
         <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
           <div style={{ padding:'14px 22px', borderBottom:'0.5px solid rgba(57,255,20,0.08)', display:'flex', alignItems:'center', justifyContent:'space-between', background:'#060f1e', flexShrink:0 }}>
             <div>
               <div style={{ fontWeight:700, fontSize:14, color:'#fff' }}>
-                {section==='lex'&&'Asistente Jurídico Lex'}{section==='docs'&&'Generador de Documentos'}{section==='historial'&&'Historial de Documentos'}{section==='config'&&'Configuración'}
+                {section==='lex'&&'Asistente Jurídico Lex'}
+                {section==='docs'&&'Generador de Documentos'}
+                {section==='historial'&&'Historial de Documentos'}
+                {section==='config'&&'Configuración'}
               </div>
               <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:2 }}>
-                {section==='lex'&&'Consultas laborales con fundamento en la LFT'}{section==='docs'&&'Contratos, actas y finiquitos listos para firmar'}{section==='historial'&&'Documentos generados por tu empresa'}{section==='config'&&'Datos de tu empresa y preferencias'}
+                {section==='lex'&&'LFT · LSS · INFONAVIT · SAR · NOM-035'}
+                {section==='docs'&&'Contratos, actas y finiquitos listos para firmar'}
+                {section==='historial'&&'Documentos generados por tu empresa'}
+                {section==='config'&&'Datos de tu empresa y preferencias'}
               </div>
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -139,10 +150,17 @@ export default function LexByte() {
             <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
               <div style={{ flex:1, overflowY:'auto', padding:'18px 22px', display:'flex', flexDirection:'column', gap:14 }}>
                 {msgs.map((m, i) => (
-                  <div key={i} style={{ display:'flex', gap:10, justifyContent: m.role==='user'?'flex-end':'flex-start', animation:'fadeUp 0.25s ease', maxWidth:'80%', alignSelf: m.role==='user'?'flex-end':'flex-start' }}>
-                    {m.role==='assistant' && <div style={{ width:28, height:28, borderRadius:'50%', background:'rgba(57,255,20,0.1)', border:'0.5px solid rgba(57,255,20,0.3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, flexShrink:0, marginTop:2 }}>⚖️</div>}
-                    <div style={{ padding:'10px 14px', borderRadius: m.role==='user'?'14px 14px 4px 14px':'14px 14px 14px 4px', fontSize:13, lineHeight:1.7, background: m.role==='user'?'#39ff14':'rgba(255,255,255,0.04)', color: m.role==='user'?'#060f1e':'#fff', border: m.role==='assistant'?'0.5px solid rgba(57,255,20,0.1)':'none', fontWeight: m.role==='user'?600:400 }} dangerouslySetInnerHTML={{ __html: fmt(m.content) }} />
-                    {m.role==='user' && <div style={{ width:28, height:28, borderRadius:'50%', background:'rgba(255,255,255,0.06)', border:'0.5px solid rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:2 }}><i className="ti ti-user" style={{ fontSize:13, color:'rgba(255,255,255,0.4)' }} aria-hidden="true" /></div>}
+                  <div key={i} style={{ display:'flex', gap:10, justifyContent: m.role==='user'?'flex-end':'flex-start', animation:'fadeUp 0.25s ease', maxWidth:'82%', alignSelf: m.role==='user'?'flex-end':'flex-start' }}>
+                    {m.role==='assistant' && (
+                      <div style={{ width:28, height:28, borderRadius:'50%', background:'rgba(57,255,20,0.1)', border:'0.5px solid rgba(57,255,20,0.3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, flexShrink:0, marginTop:2 }}>⚖️</div>
+                    )}
+                    <div style={{ padding:'11px 15px', borderRadius: m.role==='user'?'14px 14px 4px 14px':'14px 14px 14px 4px', fontSize:13, lineHeight:1.75, background: m.role==='user'?'#39ff14':'rgba(255,255,255,0.04)', color: m.role==='user'?'#060f1e':'#fff', border: m.role==='assistant'?'0.5px solid rgba(57,255,20,0.1)':'none', fontWeight: m.role==='user'?600:400 }}
+                      dangerouslySetInnerHTML={{ __html: fmt(m.content) }} />
+                    {m.role==='user' && (
+                      <div style={{ width:28, height:28, borderRadius:'50%', background:'rgba(255,255,255,0.06)', border:'0.5px solid rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:2 }}>
+                        <i className="ti ti-user" style={{ fontSize:13, color:'rgba(255,255,255,0.4)' }} aria-hidden="true" />
+                      </div>
+                    )}
                   </div>
                 ))}
                 {loading && (
@@ -158,14 +176,21 @@ export default function LexByte() {
 
               {msgs.length<=1 && (
                 <div style={{ padding:'0 22px 10px', display:'flex', flexWrap:'wrap', gap:7 }}>
-                  {sugs.map(s => <button key={s} className="sug-btn" onClick={() => setInput(s)} style={{ fontSize:11.5, padding:'5px 13px', borderRadius:20, border:'0.5px solid rgba(57,255,20,0.2)', background:'rgba(57,255,20,0.04)', color:'rgba(255,255,255,0.45)', cursor:'pointer', fontFamily:"'Sora',sans-serif", transition:'all 0.15s' }}>{s}</button>)}
+                  {sugs.map(s => (
+                    <button key={s} className="sug-btn" onClick={() => setInput(s)}
+                      style={{ fontSize:11.5, padding:'5px 13px', borderRadius:20, border:'0.5px solid rgba(57,255,20,0.2)', background:'rgba(57,255,20,0.04)', color:'rgba(255,255,255,0.45)', cursor:'pointer', fontFamily:"'Sora',sans-serif", transition:'all 0.15s' }}>
+                      {s}
+                    </button>
+                  ))}
                 </div>
               )}
 
               <div style={{ padding:'12px 22px 18px', borderTop:'0.5px solid rgba(57,255,20,0.08)', display:'flex', gap:10 }}>
-                <input className="inp" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key==='Enter'&&send()} placeholder="Escribe tu consulta laboral..."
+                <input className="inp" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key==='Enter'&&send()}
+                  placeholder="Escribe tu consulta laboral..."
                   style={{ flex:1, padding:'11px 15px', background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(57,255,20,0.2)', borderRadius:10, color:'#fff', fontSize:13, fontFamily:"'Sora',sans-serif" }} />
-                <button onClick={send} disabled={loading||!input.trim()} style={{ background: input.trim()&&!loading?'#39ff14':'rgba(57,255,20,0.25)', color:'#060f1e', border:'none', borderRadius:10, padding:'11px 22px', fontFamily:"'Sora',sans-serif", fontWeight:800, fontSize:13, cursor: input.trim()&&!loading?'pointer':'not-allowed', transition:'all 0.15s' }}>
+                <button onClick={send} disabled={loading||!input.trim()}
+                  style={{ background: input.trim()&&!loading?'#39ff14':'rgba(57,255,20,0.25)', color:'#060f1e', border:'none', borderRadius:10, padding:'11px 22px', fontFamily:"'Sora',sans-serif", fontWeight:800, fontSize:13, cursor: input.trim()&&!loading?'pointer':'not-allowed', transition:'all 0.15s' }}>
                   {loading?'...':'Enviar →'}
                 </button>
               </div>
@@ -180,8 +205,10 @@ export default function LexByte() {
                     <i className={`ti ${d.icon}`} style={{ fontSize:24, color:d.ready?'#39ff14':'rgba(255,255,255,0.3)', marginBottom:10, display:'block' }} aria-hidden="true" />
                     <div style={{ fontWeight:700, fontSize:13, marginBottom:4, color:'#fff' }}>{d.nombre}</div>
                     <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginBottom:14 }}>{d.base}</div>
-                    {d.ready ? <button style={{ background:'#39ff14', color:'#060f1e', border:'none', borderRadius:7, padding:'6px 14px', fontSize:11, fontWeight:800, cursor:'pointer', fontFamily:"'Sora',sans-serif" }}>Generar →</button>
-                    : <span style={{ fontSize:11, color:'rgba(255,255,255,0.25)', fontWeight:500 }}>Próximamente</span>}
+                    {d.ready
+                      ? <button style={{ background:'#39ff14', color:'#060f1e', border:'none', borderRadius:7, padding:'6px 14px', fontSize:11, fontWeight:800, cursor:'pointer', fontFamily:"'Sora',sans-serif" }}>Generar →</button>
+                      : <span style={{ fontSize:11, color:'rgba(255,255,255,0.25)', fontWeight:500 }}>Próximamente</span>
+                    }
                   </div>
                 ))}
               </div>
@@ -203,10 +230,13 @@ export default function LexByte() {
                 {['Nombre o razón social','RFC','Registro patronal IMSS','Correo de contacto','Ciudad / Estado'].map(label => (
                   <div key={label} style={{ marginBottom:14 }}>
                     <div style={{ fontSize:10, color:'rgba(255,255,255,0.35)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:5 }}>{label}</div>
-                    <input placeholder={`Ingresa ${label.toLowerCase()}`} style={{ width:'100%', padding:'10px 14px', background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(57,255,20,0.15)', borderRadius:9, color:'#fff', fontSize:13, fontFamily:"'Sora',sans-serif", outline:'none' }} />
+                    <input placeholder={`Ingresa ${label.toLowerCase()}`}
+                      style={{ width:'100%', padding:'10px 14px', background:'rgba(255,255,255,0.04)', border:'0.5px solid rgba(57,255,20,0.15)', borderRadius:9, color:'#fff', fontSize:13, fontFamily:"'Sora',sans-serif", outline:'none' }} />
                   </div>
                 ))}
-                <button style={{ background:'#39ff14', color:'#060f1e', border:'none', borderRadius:9, padding:'11px 26px', fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:"'Sora',sans-serif", marginTop:8 }}>Guardar cambios</button>
+                <button style={{ background:'#39ff14', color:'#060f1e', border:'none', borderRadius:9, padding:'11px 26px', fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:"'Sora',sans-serif", marginTop:8 }}>
+                  Guardar cambios
+                </button>
               </div>
             </div>
           )}
