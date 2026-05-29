@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Tipo de contrato no soportado' }, { status: 400 });
     }
 
-    return new NextResponse(buffer, {
+    return new NextResponse(buffer as unknown as BodyInit, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'Content-Disposition': `attachment; filename="LexByte_${tipo}_${Date.now()}.docx"`,
