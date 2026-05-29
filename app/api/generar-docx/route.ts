@@ -10,7 +10,7 @@ function txt(text: string, opts: {bold?:boolean; size?:number; color?:string} = 
 function par(children: TextRun[], opts: {align?:string; before?:number; after?:number} = {}) {
   return new Paragraph({
     children,
-    alignment: (opts.align||'both') as AlignmentType,
+    alignment: (opts.align||'both') as any,
     spacing: { before: opts.before??80, after: opts.after??80, line:276 },
   });
 }
