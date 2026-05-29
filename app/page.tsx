@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 type Section = 'lex' | 'docs' | 'historial' | 'config';
@@ -9,14 +9,97 @@ const V = '#39ff14';
 const F = '#060f1e';
 const SB = '#080f1c';
 
-// Componente de formulario separado para evitar re-renders
-function FormContrato({ tipo, onDescargar }: { tipo: DocTipo; onDescargar: (datos: any) => void }) {
+// ── VALIDADORES LOCALES ──────────────────────────────────────────
+function validarRFC(rfc: string) {
+  return /^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/i.test(rfc.trim());
+}
+function validarCURP(curp: string) {
+  return /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/i.test(curp.trim());
+}
+function validarNSS(nss: string) {
+  return /^\d{11}$/.test(nss.replace(/\s/g, ''));
+}
+function validarEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+function validarFecha(fecha: string) {
+  if (!fecha) return false;
+  const d = new Date(fecha);
+  return !isNaN(d.getTime());
+}
+function validarSalario(sal: string) {
+  return parseFloat(sal) >= 248.93;
+}
+
+interface ErrorMap { [key: string]: string }
+
+function validarPaso(paso: number, tipo: DocTipo, refs: any): ErrorMap {
+  const errs: ErrorMap = {};
+  const v = (ref: any) => ref?.current?.value?.trim() || '';
+
+  if (paso === 0) {
+    if (!v(refs.patronNombre)) errs.patronNombre = 'Requerido';
+    if (!v(refs.patronRFC)) errs.patronRFC = 'Requerido';
+    else if (!validarRFC(v(refs.patronRFC))) errs.patronRFC = 'Formato inválido (ej. EXY900101ABC)';
+    if (!v(refs.patronRegIMSS)) errs.patronRegIMSS = 'Requerido';
+    if (!v(refs.patronDomicilio)) errs.patronDomicilio = 'Requerido';
+    if (!v(refs.patronCiudad)) errs.patronCiudad = 'Requerido';
+    if (v(refs.patronCorreo) && !validarEmail(v(refs.patronCorreo))) errs.patronCorreo = 'Formato de correo inválido';
+    if (tipo === 'obra') {
+      if (!v(refs.obraNombre)) errs.obraNombre = 'Requerido';
+      if (!v(refs.obraDomicilio)) errs.obraDomicilio = 'Requerido';
+      if (!v(refs.obraTermino)) errs.obraTermino = 'Requerido';
+    }
+  }
+  if (paso === 1) {
+    if (!v(refs.trabNombre)) errs.trabNombre = 'Requerido';
+    if (!v(refs.trabNacimiento)) errs.trabNacimiento = 'Requerido';
+    else {
+      const edad = Math.floor((Date.now() - new Date(v(refs.trabNacimiento)).getTime()) / 31557600000);
+      if (edad < 15) errs.trabNacimiento = '⚠️ Trabajador menor de 15 años — Art. 22 LFT';
+      if (edad > 100) errs.trabNacimiento = 'Fecha inválida';
+    }
+    if (!v(refs.trabRFC)) errs.trabRFC = 'Requerido';
+    else if (!validarRFC(v(refs.trabRFC))) errs.trabRFC = 'Formato inválido (13 caracteres: XXXX000000XXX)';
+    if (!v(refs.trabCURP)) errs.trabCURP = 'Requerido';
+    else if (!validarCURP(v(refs.trabCURP))) errs.trabCURP = 'Formato inválido (18 caracteres)';
+    if (!v(refs.trabNSS)) errs.trabNSS = 'Requerido';
+    else if (!validarNSS(v(refs.trabNSS))) errs.trabNSS = 'Debe tener 11 dígitos — Art. 15 LSS';
+    if (!v(refs.trabDomicilio)) errs.trabDomicilio = 'Requerido';
+  }
+  if (paso === 2) {
+    if (!v(refs.condPuesto)) errs.condPuesto = 'Requerido';
+    if (!v(refs.condArea)) errs.condArea = 'Requerido';
+    if (!v(refs.condSalario)) errs.condSalario = 'Requerido';
+    else if (!validarSalario(v(refs.condSalario))) errs.condSalario = `⚠️ Menor al SMV 2025 ($248.93) — Art. 85 LFT`;
+    if (tipo === 'capacitacion') {
+      if (!v(refs.condInicio)) errs.condInicio = 'Requerido';
+      if (!v(refs.condTermino)) errs.condTermino = 'Requerido';
+      if (v(refs.condInicio) && v(refs.condTermino)) {
+        if (new Date(v(refs.condTermino)) <= new Date(v(refs.condInicio))) errs.condTermino = 'La fecha de término debe ser posterior al inicio';
+      }
+    }
+    if (!v(refs.condActividades)) errs.condActividades = 'Describe al menos una actividad del puesto';
+  }
+  if (paso === 3) {
+    if (!v(refs.jornadaEntrada)) errs.jornadaEntrada = 'Requerido';
+    if (!v(refs.jornadaSalida)) errs.jornadaSalida = 'Requerido';
+    if (v(refs.jornadaEntrada) && v(refs.jornadaSalida)) {
+      if (v(refs.jornadaEntrada) >= v(refs.jornadaSalida)) errs.jornadaSalida = '⚠️ La salida debe ser posterior a la entrada';
+    }
+  }
+  return errs;
+}
+
+// ── COMPONENTE FORMULARIO ────────────────────────────────────────
+function FormContrato({ tipo }: { tipo: DocTipo }) {
   const [paso, setPaso] = useState(0);
+  const [errores, setErrores] = useState<ErrorMap>({});
+  const [validandoPaso, setValidandoPaso] = useState(false);
   const [analisis, setAnalisis] = useState<any>(null);
   const [analizando, setAnalizando] = useState(false);
   const [generando, setGenerando] = useState(false);
 
-  // Refs para todos los campos — evitan re-renders
   const refs: any = {
     patronNombre: useRef<HTMLInputElement>(null),
     patronRFC: useRef<HTMLInputElement>(null),
@@ -100,37 +183,46 @@ function FormContrato({ tipo, onDescargar }: { tipo: DocTipo; onDescargar: (dato
     jornadaSalida: refs.jornadaSalida.current?.value||'',
     jornadaDescanso: refs.jornadaDescanso.current?.value||'domingo',
     jornadaPago: refs.jornadaPago.current?.value||'semanalmente',
-    beneficiarios: [
-      { nombre: refs.benef0nombre.current?.value||'', parentesco: refs.benef0parentesco.current?.value||'', pct: refs.benef0pct.current?.value||'' },
-      { nombre: refs.benef1nombre.current?.value||'', parentesco: refs.benef1parentesco.current?.value||'', pct: refs.benef1pct.current?.value||'' },
-      { nombre: refs.benef2nombre.current?.value||'', parentesco: refs.benef2parentesco.current?.value||'', pct: refs.benef2pct.current?.value||'' },
-    ].filter(b => b.nombre),
+    beneficiarios: [0,1,2].map(i=>({
+      nombre: refs[`benef${i}nombre`].current?.value||'',
+      parentesco: refs[`benef${i}parentesco`].current?.value||'',
+      pct: refs[`benef${i}pct`].current?.value||'',
+    })).filter(b=>b.nombre),
   });
+
+  const avanzarPaso = async () => {
+    // 1. Validación local
+    const errs = validarPaso(paso, tipo, refs);
+    if (Object.keys(errs).length > 0) {
+      setErrores(errs);
+      return;
+    }
+    setErrores({});
+    setPaso(p => p + 1);
+  };
 
   const analizarContrato = async () => {
     setAnalizando(true);
     setAnalisis(null);
-    const datos = getDatos();
     try {
       const res = await fetch('/api/analizar-contrato', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo: tipo==='capacitacion'?'Capacitación Inicial':'Obra Determinada', datos }),
+        body: JSON.stringify({ tipo: tipo==='capacitacion'?'Capacitación Inicial':'Obra Determinada', datos: getDatos() }),
       });
       const data = await res.json();
       setAnalisis(data);
     } catch {
-      setAnalisis({ puntaje: 50, observaciones: [{ tipo:'warn', texto:'No se pudo conectar con el análisis IA. Verifica tu conexión.' }], recomendacion:'' });
+      setAnalisis({ puntaje:50, observaciones:[{tipo:'warn',texto:'No se pudo conectar con el análisis IA.'}], recomendacion:'' });
     }
     setAnalizando(false);
   };
 
   const descargarDocx = async () => {
     setGenerando(true);
-    const datos = getDatos();
     try {
       const res = await fetch('/api/generar-docx', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo, datos }),
+        body: JSON.stringify({ tipo, datos: getDatos() }),
       });
       if (!res.ok) throw new Error('Error');
       const blob = await res.blob();
@@ -142,140 +234,150 @@ function FormContrato({ tipo, onDescargar }: { tipo: DocTipo; onDescargar: (dato
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch { alert('Error al generar el documento. Intenta de nuevo.'); }
+    } catch { alert('Error al generar. Intenta de nuevo.'); }
     setGenerando(false);
   };
 
-  const inpSt: any = { width:'100%', padding:'9px 12px', background:'rgba(255,255,255,0.05)', border:'0.5px solid rgba(57,255,20,0.2)', borderRadius:8, color:'#fff', fontSize:13, fontFamily:"'Sora',sans-serif", outline:'none', marginBottom:0 };
+  const inpSt: any = (campo: string) => ({
+    width:'100%', padding:'9px 12px',
+    background: errores[campo] ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.05)',
+    border: `0.5px solid ${errores[campo] ? '#ef4444' : 'rgba(57,255,20,0.2)'}`,
+    borderRadius:8, color:'#fff', fontSize:13, fontFamily:"'Sora',sans-serif", outline:'none',
+  });
   const labSt: any = { fontSize:10, color:'rgba(255,255,255,0.4)', fontWeight:600, textTransform:'uppercase' as const, letterSpacing:'0.4px', marginBottom:5, display:'block' };
   const fldSt: any = { marginBottom:14 };
   const rowSt: any = { display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14 };
 
+  const ErrMsg = ({ campo }: { campo: string }) => errores[campo]
+    ? <div style={{fontSize:11,color:'#fca5a5',marginTop:4}}>⚠️ {errores[campo]}</div>
+    : null;
+
   const pasosTitulos = ['Patrón','Trabajador','Condiciones','Jornada','Revisión IA'];
 
   return (
-    <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-      {/* Tabs de pasos */}
-      <div style={{ display:'flex', borderBottom:'0.5px solid rgba(57,255,20,0.08)', flexShrink:0, padding:'0 22px', overflowX:'auto' }}>
-        {pasosTitulos.map((t,i) => (
-          <div key={i} onClick={() => { if(i < paso) setPaso(i); }}
-            style={{ padding:'10px 14px', fontSize:12, cursor:i<paso?'pointer':'default', borderBottom:`2px solid ${i===paso?V:'transparent'}`, color:i===paso?V:i<paso?'rgba(255,255,255,0.5)':'rgba(255,255,255,0.25)', fontWeight:i===paso?600:400, transition:'all 0.15s', whiteSpace:'nowrap' as const }}>
+    <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+      {/* Tabs */}
+      <div style={{display:'flex',borderBottom:'0.5px solid rgba(57,255,20,0.08)',flexShrink:0,padding:'0 22px',overflowX:'auto'}}>
+        {pasosTitulos.map((t,i)=>(
+          <div key={i} onClick={()=>{if(i<paso)setPaso(i);}}
+            style={{padding:'10px 14px',fontSize:12,cursor:i<paso?'pointer':'default',borderBottom:`2px solid ${i===paso?V:'transparent'}`,color:i===paso?V:i<paso?'rgba(255,255,255,0.5)':'rgba(255,255,255,0.25)',fontWeight:i===paso?600:400,transition:'all 0.15s',whiteSpace:'nowrap' as const}}>
             {i<paso?'✓ ':''}{t}
           </div>
         ))}
       </div>
 
-      {/* Contenido del paso */}
-      <div style={{ flex:1, overflowY:'auto', padding:22 }}>
+      <div style={{flex:1,overflowY:'auto',padding:22}}>
 
         {/* PASO 0 — PATRÓN */}
-        <div style={{ display: paso===0?'block':'none' }}>
+        <div style={{display:paso===0?'block':'none'}}>
           <div style={rowSt}>
-            <div style={fldSt}><label style={labSt}>Nombre o razón social</label><input ref={refs.patronNombre} placeholder="Empresa XYZ S.A. de C.V." style={inpSt}/></div>
-            <div style={fldSt}><label style={labSt}>RFC del patrón</label><input ref={refs.patronRFC} placeholder="EXY900101ABC" style={inpSt}/></div>
+            <div style={fldSt}><label style={labSt}>Nombre o razón social *</label><input ref={refs.patronNombre} placeholder="Empresa XYZ S.A. de C.V." style={inpSt('patronNombre')}/><ErrMsg campo="patronNombre"/></div>
+            <div style={fldSt}><label style={labSt}>RFC del patrón *</label><input ref={refs.patronRFC} placeholder="EXY900101ABC" maxLength={13} style={{...inpSt('patronRFC'),textTransform:'uppercase'}}/><ErrMsg campo="patronRFC"/></div>
           </div>
           <div style={rowSt}>
-            <div style={fldSt}><label style={labSt}>Registro patronal IMSS</label><input ref={refs.patronRegIMSS} placeholder="B12345678104" style={inpSt}/></div>
-            <div style={fldSt}><label style={labSt}>Tipo de persona</label><select ref={refs.patronTipo} style={inpSt} defaultValue="moral"><option value="moral">Persona moral</option><option value="fisica">Persona física</option></select></div>
+            <div style={fldSt}><label style={labSt}>Registro patronal IMSS *</label><input ref={refs.patronRegIMSS} placeholder="B12345678104" style={inpSt('patronRegIMSS')}/><ErrMsg campo="patronRegIMSS"/></div>
+            <div style={fldSt}><label style={labSt}>Tipo de persona</label><select ref={refs.patronTipo} style={inpSt('')} defaultValue="moral"><option value="moral">Persona moral</option><option value="fisica">Persona física</option></select></div>
           </div>
-          <div style={fldSt}><label style={labSt}>Domicilio fiscal</label><input ref={refs.patronDomicilio} placeholder="Calle, número, colonia, C.P." style={inpSt}/></div>
+          <div style={fldSt}><label style={labSt}>Domicilio fiscal *</label><input ref={refs.patronDomicilio} placeholder="Calle, número, colonia, C.P." style={inpSt('patronDomicilio')}/><ErrMsg campo="patronDomicilio"/></div>
           <div style={rowSt}>
-            <div style={fldSt}><label style={labSt}>Ciudad / Estado</label><input ref={refs.patronCiudad} placeholder="Monterrey, Nuevo León" style={inpSt}/></div>
-            <div style={fldSt}><label style={labSt}>Correo de privacidad</label><input ref={refs.patronCorreo} type="email" placeholder="privacidad@empresa.com" style={inpSt}/></div>
+            <div style={fldSt}><label style={labSt}>Ciudad / Estado *</label><input ref={refs.patronCiudad} placeholder="Monterrey, Nuevo León" style={inpSt('patronCiudad')}/><ErrMsg campo="patronCiudad"/></div>
+            <div style={fldSt}><label style={labSt}>Correo de privacidad</label><input ref={refs.patronCorreo} type="email" placeholder="privacidad@empresa.com" style={inpSt('patronCorreo')}/><ErrMsg campo="patronCorreo"/></div>
           </div>
-          <div style={fldSt}><label style={labSt}>Representante legal</label><input ref={refs.patronRepresentante} placeholder="Lic. Roberto García Martínez" style={inpSt}/></div>
-          {tipo==='obra' && <>
+          <div style={fldSt}><label style={labSt}>Representante legal</label><input ref={refs.patronRepresentante} placeholder="Lic. Roberto García Martínez" style={inpSt('')}/></div>
+          {tipo==='obra'&&<>
             <div style={{margin:'16px 0 12px',fontSize:11,fontWeight:600,color:V,textTransform:'uppercase',letterSpacing:'0.5px'}}>Datos de la obra</div>
-            <div style={fldSt}><label style={labSt}>Nombre de la obra</label><input ref={refs.obraNombre} placeholder="Construcción Torre Corporativa Norte" style={inpSt}/></div>
-            <div style={fldSt}><label style={labSt}>Domicilio de la obra</label><input ref={refs.obraDomicilio} placeholder="Calle, colonia, C.P., ciudad" style={inpSt}/></div>
+            <div style={fldSt}><label style={labSt}>Nombre de la obra *</label><input ref={refs.obraNombre} placeholder="Construcción Torre Corporativa Norte" style={inpSt('obraNombre')}/><ErrMsg campo="obraNombre"/></div>
+            <div style={fldSt}><label style={labSt}>Domicilio de la obra *</label><input ref={refs.obraDomicilio} placeholder="Calle, colonia, C.P., ciudad" style={inpSt('obraDomicilio')}/><ErrMsg campo="obraDomicilio"/></div>
             <div style={rowSt}>
-              <div style={fldSt}><label style={labSt}>Registro IMSS de la obra</label><input ref={refs.obraRegIMSS} placeholder="12-345678-10-0" style={inpSt}/></div>
-              <div style={fldSt}><label style={labSt}>Fecha estimada de término</label><input ref={refs.obraTermino} type="date" style={inpSt}/></div>
+              <div style={fldSt}><label style={labSt}>Registro IMSS de la obra</label><input ref={refs.obraRegIMSS} placeholder="12-345678-10-0" style={inpSt('')}/></div>
+              <div style={fldSt}><label style={labSt}>Fecha estimada de término *</label><input ref={refs.obraTermino} type="date" style={inpSt('obraTermino')}/><ErrMsg campo="obraTermino"/></div>
             </div>
           </>}
         </div>
 
         {/* PASO 1 — TRABAJADOR */}
-        <div style={{ display: paso===1?'block':'none' }}>
+        <div style={{display:paso===1?'block':'none'}}>
           <div style={rowSt}>
-            <div style={fldSt}><label style={labSt}>Nombre completo</label><input ref={refs.trabNombre} placeholder="Nombre Apellido Apellido" style={inpSt}/></div>
-            <div style={fldSt}><label style={labSt}>Sexo</label><select ref={refs.trabSexo} style={inpSt} defaultValue="MASCULINO"><option value="MASCULINO">Masculino</option><option value="FEMENINO">Femenino</option></select></div>
+            <div style={fldSt}><label style={labSt}>Nombre completo *</label><input ref={refs.trabNombre} placeholder="Nombre Apellido Apellido" style={inpSt('trabNombre')}/><ErrMsg campo="trabNombre"/></div>
+            <div style={fldSt}><label style={labSt}>Sexo</label><select ref={refs.trabSexo} style={inpSt('')} defaultValue="MASCULINO"><option value="MASCULINO">Masculino</option><option value="FEMENINO">Femenino</option></select></div>
           </div>
           <div style={rowSt}>
-            <div style={fldSt}><label style={labSt}>Fecha de nacimiento</label><input ref={refs.trabNacimiento} type="date" style={inpSt}/></div>
-            <div style={fldSt}><label style={labSt}>Nacionalidad</label><input ref={refs.trabNacionalidad} placeholder="México" defaultValue="México" style={inpSt}/></div>
+            <div style={fldSt}><label style={labSt}>Fecha de nacimiento *</label><input ref={refs.trabNacimiento} type="date" style={inpSt('trabNacimiento')}/><ErrMsg campo="trabNacimiento"/></div>
+            <div style={fldSt}><label style={labSt}>Nacionalidad</label><input ref={refs.trabNacionalidad} placeholder="México" defaultValue="México" style={inpSt('')}/></div>
           </div>
           <div style={rowSt}>
-            <div style={fldSt}><label style={labSt}>RFC</label><input ref={refs.trabRFC} placeholder="XXXX000000XXX" style={inpSt}/></div>
-            <div style={fldSt}><label style={labSt}>CURP</label><input ref={refs.trabCURP} placeholder="XXXX000000XXXXXX00" style={inpSt}/></div>
+            <div style={fldSt}><label style={labSt}>RFC * (13 caracteres)</label><input ref={refs.trabRFC} placeholder="GOPM950315XYZ" maxLength={13} style={{...inpSt('trabRFC'),textTransform:'uppercase'}}/><ErrMsg campo="trabRFC"/></div>
+            <div style={fldSt}><label style={labSt}>CURP * (18 caracteres)</label><input ref={refs.trabCURP} placeholder="GOPM950315MNLNRR09" maxLength={18} style={{...inpSt('trabCURP'),textTransform:'uppercase'}}/><ErrMsg campo="trabCURP"/></div>
           </div>
           <div style={rowSt}>
-            <div style={fldSt}><label style={labSt}>NSS (IMSS)</label><input ref={refs.trabNSS} placeholder="00 00 00 0000 0" style={inpSt}/></div>
+            <div style={fldSt}><label style={labSt}>NSS IMSS * (11 dígitos)</label><input ref={refs.trabNSS} placeholder="45 67 89 1234 5" style={inpSt('trabNSS')}/><ErrMsg campo="trabNSS"/></div>
           </div>
-          <div style={fldSt}><label style={labSt}>Domicilio del trabajador</label><input ref={refs.trabDomicilio} placeholder="Calle, colonia, C.P., ciudad, estado" style={inpSt}/></div>
+          <div style={fldSt}><label style={labSt}>Domicilio del trabajador *</label><input ref={refs.trabDomicilio} placeholder="Calle, colonia, C.P., ciudad, estado" style={inpSt('trabDomicilio')}/><ErrMsg campo="trabDomicilio"/></div>
         </div>
 
         {/* PASO 2 — CONDICIONES */}
-        <div style={{ display: paso===2?'block':'none' }}>
+        <div style={{display:paso===2?'block':'none'}}>
           <div style={rowSt}>
-            <div style={fldSt}><label style={labSt}>Denominación del puesto</label><input ref={refs.condPuesto} placeholder="Analista de RRHH" style={inpSt}/></div>
-            <div style={fldSt}><label style={labSt}>Área / Departamento</label><input ref={refs.condArea} placeholder="Recursos Humanos" style={inpSt}/></div>
+            <div style={fldSt}><label style={labSt}>Denominación del puesto *</label><input ref={refs.condPuesto} placeholder="Analista de RRHH" style={inpSt('condPuesto')}/><ErrMsg campo="condPuesto"/></div>
+            <div style={fldSt}><label style={labSt}>Área / Departamento *</label><input ref={refs.condArea} placeholder="Recursos Humanos" style={inpSt('condArea')}/><ErrMsg campo="condArea"/></div>
           </div>
-          {tipo==='capacitacion' && <div style={rowSt}>
-            <div style={fldSt}><label style={labSt}>Duración del contrato</label><select ref={refs.duracion} style={inpSt} defaultValue="90"><option value="30">30 días</option><option value="60">60 días</option><option value="90">90 días</option></select></div>
-            <div style={fldSt}><label style={labSt}>Fecha de inicio</label><input ref={refs.condInicio} type="date" style={inpSt}/></div>
+          {tipo==='capacitacion'&&<div style={rowSt}>
+            <div style={fldSt}><label style={labSt}>Duración del contrato</label><select ref={refs.duracion} style={inpSt('')} defaultValue="90"><option value="30">30 días</option><option value="60">60 días</option><option value="90">90 días</option></select></div>
+            <div style={fldSt}><label style={labSt}>Fecha de inicio *</label><input ref={refs.condInicio} type="date" style={inpSt('condInicio')}/><ErrMsg campo="condInicio"/></div>
           </div>}
-          {tipo==='capacitacion' && <div style={fldSt}><label style={labSt}>Fecha de término</label><input ref={refs.condTermino} type="date" style={inpSt}/></div>}
-          {tipo==='obra' && <>
-            <div style={fldSt}><label style={labSt}>Jefe inmediato</label><input ref={refs.condJefe} placeholder="Ing. Juan López — Director de Obra" style={inpSt}/></div>
-            <div style={fldSt}><label style={labSt}>Fecha de inicio</label><input ref={refs.condInicio} type="date" style={inpSt}/></div>
+          {tipo==='capacitacion'&&<div style={fldSt}><label style={labSt}>Fecha de término *</label><input ref={refs.condTermino} type="date" style={inpSt('condTermino')}/><ErrMsg campo="condTermino"/></div>}
+          {tipo==='obra'&&<>
+            <div style={fldSt}><label style={labSt}>Jefe inmediato</label><input ref={refs.condJefe} placeholder="Ing. Juan López — Director de Obra" style={inpSt('')}/></div>
+            <div style={fldSt}><label style={labSt}>Fecha de inicio *</label><input ref={refs.condInicio} type="date" style={inpSt('condInicio')}/><ErrMsg campo="condInicio"/></div>
           </>}
           <div style={rowSt}>
-            <div style={fldSt}><label style={labSt}>Salario diario (MXN)</label><input ref={refs.condSalario} type="number" placeholder="Mín. $248.93" style={inpSt}/></div>
-            <div style={fldSt}><label style={labSt}>Días de aguinaldo (mín. 15)</label><input ref={refs.condAguinaldo} type="number" defaultValue="15" style={inpSt}/></div>
+            <div style={fldSt}><label style={labSt}>Salario diario MXN * (mín. $248.93)</label><input ref={refs.condSalario} type="number" placeholder="350.00" step="0.01" style={inpSt('condSalario')}/><ErrMsg campo="condSalario"/></div>
+            <div style={fldSt}><label style={labSt}>Días de aguinaldo (mín. 15)</label><input ref={refs.condAguinaldo} type="number" defaultValue="15" style={inpSt('')}/></div>
           </div>
-          <div style={fldSt}><label style={labSt}>Prima vacacional % (mín. 25)</label><input ref={refs.condPrima} type="number" defaultValue="25" style={inpSt}/></div>
-          <div style={fldSt}><label style={labSt}>Actividades del puesto (una por línea)</label>
-            <textarea ref={refs.condActividades} placeholder={"Reclutamiento y selección de personal\nElaboración de contratos\nControl de expedientes"} rows={4} style={{...inpSt, resize:'vertical'}}/>
+          <div style={fldSt}><label style={labSt}>Prima vacacional % (mín. 25)</label><input ref={refs.condPrima} type="number" defaultValue="25" style={inpSt('')}/></div>
+          <div style={fldSt}><label style={labSt}>Actividades del puesto * (una por línea)</label>
+            <textarea ref={refs.condActividades} placeholder={"Reclutamiento y selección de personal\nElaboración de contratos laborales\nControl de expedientes del personal"} rows={4} style={{...inpSt('condActividades'),resize:'vertical' as const}}/>
+            <ErrMsg campo="condActividades"/>
           </div>
         </div>
 
         {/* PASO 3 — JORNADA */}
-        <div style={{ display: paso===3?'block':'none' }}>
+        <div style={{display:paso===3?'block':'none'}}>
           <div style={rowSt}>
-            <div style={fldSt}><label style={labSt}>Tipo de jornada</label><select ref={refs.jornadaTipo} style={inpSt} defaultValue="diurna"><option value="diurna">Diurna (8 h)</option><option value="nocturna">Nocturna (7 h)</option><option value="mixta">Mixta (7.5 h)</option></select></div>
-            <div style={fldSt}><label style={labSt}>Día de descanso</label><select ref={refs.jornadaDescanso} style={inpSt} defaultValue="domingo"><option value="lunes">Lunes</option><option value="martes">Martes</option><option value="miércoles">Miércoles</option><option value="jueves">Jueves</option><option value="viernes">Viernes</option><option value="sábado">Sábado</option><option value="domingo">Domingo</option></select></div>
+            <div style={fldSt}><label style={labSt}>Tipo de jornada</label><select ref={refs.jornadaTipo} style={inpSt('')} defaultValue="diurna"><option value="diurna">Diurna (máx. 8 h)</option><option value="nocturna">Nocturna (máx. 7 h)</option><option value="mixta">Mixta (máx. 7.5 h)</option></select></div>
+            <div style={fldSt}><label style={labSt}>Día de descanso semanal</label><select ref={refs.jornadaDescanso} style={inpSt('')} defaultValue="domingo"><option value="lunes">Lunes</option><option value="martes">Martes</option><option value="miércoles">Miércoles</option><option value="jueves">Jueves</option><option value="viernes">Viernes</option><option value="sábado">Sábado</option><option value="domingo">Domingo</option></select></div>
           </div>
           <div style={rowSt}>
-            <div style={fldSt}><label style={labSt}>Hora de entrada</label><input ref={refs.jornadaEntrada} type="time" style={inpSt}/></div>
-            <div style={fldSt}><label style={labSt}>Hora de salida</label><input ref={refs.jornadaSalida} type="time" style={inpSt}/></div>
+            <div style={fldSt}><label style={labSt}>Hora de entrada *</label><input ref={refs.jornadaEntrada} type="time" style={inpSt('jornadaEntrada')}/><ErrMsg campo="jornadaEntrada"/></div>
+            <div style={fldSt}><label style={labSt}>Hora de salida *</label><input ref={refs.jornadaSalida} type="time" style={inpSt('jornadaSalida')}/><ErrMsg campo="jornadaSalida"/></div>
           </div>
-          <div style={fldSt}><label style={labSt}>Periodicidad de pago</label><select ref={refs.jornadaPago} style={inpSt} defaultValue="semanalmente"><option value="semanalmente">Semanal</option><option value="quincenalmente">Quincenal</option></select></div>
-          <div style={{marginTop:16,padding:'10px 14px',background:'rgba(57,255,20,0.05)',border:'0.5px solid rgba(57,255,20,0.15)',borderRadius:8,fontSize:12,color:'rgba(255,255,255,0.5)'}}>
-            🔒 Confidencialidad post-contrato: <strong style={{color:V}}>5 años</strong> — estándar LexByte.
+          <div style={fldSt}><label style={labSt}>Periodicidad de pago</label><select ref={refs.jornadaPago} style={inpSt('')} defaultValue="semanalmente"><option value="semanalmente">Semanal</option><option value="quincenalmente">Quincenal</option></select></div>
+          <div style={{marginTop:12,padding:'10px 14px',background:'rgba(57,255,20,0.05)',border:'0.5px solid rgba(57,255,20,0.15)',borderRadius:8,fontSize:12,color:'rgba(255,255,255,0.5)'}}>
+            🔒 Confidencialidad post-contrato: <strong style={{color:V}}>5 años</strong> — estándar LexByte para todos los contratos.
           </div>
         </div>
 
-        {/* PASO 4 — BENEFICIARIOS + ANÁLISIS IA */}
-        <div style={{ display: paso===4?'block':'none' }}>
+        {/* PASO 4 — BENEFICIARIOS + ANÁLISIS */}
+        <div style={{display:paso===4?'block':'none'}}>
           <div style={{marginBottom:20}}>
-            <div style={{fontSize:12,fontWeight:600,color:V,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:12}}>Beneficiarios — Art. 501 LFT</div>
-            {[0,1,2].map(i => (
+            <div style={{fontSize:12,fontWeight:600,color:V,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:4}}>Beneficiarios — Art. 501 LFT</div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.35)',marginBottom:14}}>Los porcentajes deben sumar 100%. Si no hay beneficiarios aplica el Art. 501 LFT.</div>
+            {[0,1,2].map(i=>(
               <div key={i} style={{display:'grid',gridTemplateColumns:'2fr 1fr 80px',gap:8,marginBottom:10,alignItems:'end'}}>
-                <div><label style={{...labSt,fontSize:9}}>Nombre completo</label><input ref={(refs as any)[`benef${i}nombre`]} placeholder="Nombre Apellido" style={inpSt}/></div>
-                <div><label style={{...labSt,fontSize:9}}>Parentesco</label><input ref={(refs as any)[`benef${i}parentesco`]} placeholder="Cónyuge" style={inpSt}/></div>
-                <div><label style={{...labSt,fontSize:9}}>%</label><input ref={(refs as any)[`benef${i}pct`]} type="number" placeholder="100" style={inpSt}/></div>
+                <div><label style={{...labSt,fontSize:9}}>Nombre completo</label><input ref={refs[`benef${i}nombre`]} placeholder="Nombre Apellido" style={inpSt('')}/></div>
+                <div><label style={{...labSt,fontSize:9}}>Parentesco</label><input ref={refs[`benef${i}parentesco`]} placeholder="Cónyuge" style={inpSt('')}/></div>
+                <div><label style={{...labSt,fontSize:9}}>%</label><input ref={refs[`benef${i}pct`]} type="number" placeholder="100" min="0" max="100" style={inpSt('')}/></div>
               </div>
             ))}
           </div>
 
-          {!analisis && !analizando && (
+          {!analisis&&!analizando&&(
             <button onClick={analizarContrato} style={{width:'100%',background:V,color:F,border:'none',borderRadius:10,padding:'13px 0',fontSize:14,fontWeight:800,cursor:'pointer',fontFamily:"'Sora',sans-serif"}}>
               ⚖️ Analizar contrato con IA →
             </button>
           )}
 
-          {analizando && (
+          {analizando&&(
             <div style={{textAlign:'center',padding:'30px 0'}}>
               <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:12}}>
                 {[0,0.15,0.3].map((d,i)=><div key={i} style={{width:10,height:10,borderRadius:'50%',background:V,opacity:0.4,animation:`pulse 1.2s ${d}s infinite`}}/>)}
@@ -284,7 +386,7 @@ function FormContrato({ tipo, onDescargar }: { tipo: DocTipo; onDescargar: (dato
             </div>
           )}
 
-          {analisis && !analizando && (
+          {analisis&&!analizando&&(
             <div>
               <div style={{marginBottom:16}}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
@@ -295,8 +397,7 @@ function FormContrato({ tipo, onDescargar }: { tipo: DocTipo; onDescargar: (dato
                   <div style={{height:'100%',width:`${analisis.puntaje}%`,background:analisis.puntaje>=80?V:analisis.puntaje>=60?'#facc15':'#ef4444',borderRadius:3}}/>
                 </div>
               </div>
-
-              {analisis.observaciones?.map((o: any, i: number) => (
+              {analisis.observaciones?.map((o:any,i:number)=>(
                 <div key={i} style={{padding:'9px 12px',borderRadius:8,marginBottom:8,fontSize:12.5,lineHeight:1.55,
                   background:o.tipo==='ok'?'rgba(57,255,20,0.08)':o.tipo==='error'?'rgba(239,68,68,0.08)':o.tipo==='warn'?'rgba(250,204,21,0.08)':'rgba(255,255,255,0.04)',
                   border:`0.5px solid ${o.tipo==='ok'?'rgba(57,255,20,0.2)':o.tipo==='error'?'rgba(239,68,68,0.2)':o.tipo==='warn'?'rgba(250,204,21,0.2)':'rgba(255,255,255,0.1)'}`,
@@ -304,13 +405,11 @@ function FormContrato({ tipo, onDescargar }: { tipo: DocTipo; onDescargar: (dato
                   {o.tipo==='ok'?'✅':o.tipo==='error'?'❌':o.tipo==='warn'?'⚠️':'ℹ️'} {o.texto}
                 </div>
               ))}
-
-              {analisis.recomendacion && (
+              {analisis.recomendacion&&(
                 <div style={{marginBottom:16,padding:'10px 14px',background:'rgba(255,255,255,0.03)',border:'0.5px solid rgba(57,255,20,0.1)',borderRadius:8,fontSize:12,color:'rgba(255,255,255,0.5)'}}>
                   <strong style={{color:'rgba(255,255,255,0.8)'}}>Recomendación:</strong> {analisis.recomendacion}
                 </div>
               )}
-
               <button onClick={descargarDocx} disabled={generando}
                 style={{width:'100%',background:generando?'rgba(57,255,20,0.3)':V,color:F,border:'none',borderRadius:10,padding:'13px 0',fontSize:14,fontWeight:800,cursor:generando?'not-allowed':'pointer',fontFamily:"'Sora',sans-serif",marginBottom:8}}>
                 {generando?'Generando DOCX...':'⬇️ Descargar DOCX'}
@@ -323,53 +422,54 @@ function FormContrato({ tipo, onDescargar }: { tipo: DocTipo; onDescargar: (dato
         </div>
       </div>
 
-      {/* Footer navegación */}
+      {/* Footer */}
       <div style={{padding:'12px 22px 16px',borderTop:'0.5px solid rgba(57,255,20,0.08)',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
-        <button onClick={()=>{ if(paso>0) setPaso(p=>p-1); }}
+        <button onClick={()=>{if(paso>0){setPaso(p=>p-1);setErrores({});}}}
           style={{background:'rgba(255,255,255,0.05)',color:'rgba(255,255,255,0.6)',border:'0.5px solid rgba(255,255,255,0.1)',borderRadius:8,padding:'9px 18px',fontSize:12,cursor:paso===0?'not-allowed':'pointer',fontFamily:"'Sora',sans-serif",opacity:paso===0?0.4:1}}>
           ← Atrás
         </button>
         <div style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>Paso {paso+1} de 5</div>
-        {paso < 4 && (
-          <button onClick={()=>setPaso(p=>p+1)}
+        {paso<4&&(
+          <button onClick={avanzarPaso} disabled={validandoPaso}
             style={{background:V,color:F,border:'none',borderRadius:8,padding:'9px 20px',fontSize:12,fontWeight:800,cursor:'pointer',fontFamily:"'Sora',sans-serif"}}>
-            Siguiente →
+            {validandoPaso?'Validando...':'Siguiente →'}
           </button>
         )}
-        {paso === 4 && <div style={{width:90}}/>}
+        {paso===4&&<div style={{width:90}}/>}
       </div>
     </div>
   );
 }
 
+// ── COMPONENTE PRINCIPAL ─────────────────────────────────────────
 export default function LexByte() {
   const [section, setSection] = useState<Section>('lex');
   const [docTipo, setDocTipo] = useState<DocTipo>(null);
   const [msgs, setMsgs] = useState<Msg[]>([
-    { role:'assistant', content:'¡Bienvenido a **LexByte**! Soy **Lex**, tu asistente jurídico laboral.\n\nPuedo ayudarte con contratos, rescisiones, actas, incapacidades, IMSS, INFONAVIT y más.\n\n¿Qué necesitas saber hoy?' }
+    {role:'assistant',content:'¡Bienvenido a **LexByte**! Soy **Lex**, tu asistente jurídico laboral.\n\nPuedo ayudarte con contratos, rescisiones, actas, incapacidades, IMSS, INFONAVIT y más.\n\n¿Qué necesitas saber hoy?'}
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [freeLeft, setFreeLeft] = useState(3);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:'smooth' }); }, [msgs]);
+  useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:'smooth'});},[msgs]);
 
   const send = async () => {
-    if (!input.trim() || loading) return;
-    if (freeLeft <= 0) { setMsgs(m=>[...m,{role:'assistant',content:'Has agotado tus consultas gratuitas. Suscríbete desde **$799 MXN/mes**.'}]); return; }
-    const userMsg: Msg = { role:'user', content:input };
-    const newMsgs = [...msgs, userMsg];
-    setMsgs(newMsgs); setInput(''); setLoading(true); setFreeLeft(f=>f-1);
+    if (!input.trim()||loading) return;
+    if (freeLeft<=0){setMsgs(m=>[...m,{role:'assistant',content:'Has agotado tus consultas gratuitas. Suscríbete desde **$799 MXN/mes**.'}]);return;}
+    const userMsg:Msg={role:'user',content:input};
+    const newMsgs=[...msgs,userMsg];
+    setMsgs(newMsgs);setInput('');setLoading(true);setFreeLeft(f=>f-1);
     try {
-      const res = await fetch('/api/chat', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({messages:newMsgs.map(m=>({role:m.role,content:m.content}))}) });
-      const data = await res.json();
+      const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:newMsgs.map(m=>({role:m.role,content:m.content}))})});
+      const data=await res.json();
       setMsgs(m=>[...m,{role:'assistant',content:data.reply||'Error al procesar.'}]);
-    } catch { setMsgs(m=>[...m,{role:'assistant',content:'Error de conexión.'}]); }
+    } catch {setMsgs(m=>[...m,{role:'assistant',content:'Error de conexión.'}]);}
     setLoading(false);
   };
 
-  const fmt = (t: string) => t
+  const fmt=(t:string)=>t
     .replace(/^### (.*$)/gim,'<span style="display:block;font-size:13px;font-weight:700;color:rgba(255,255,255,0.9);margin-top:8px;margin-bottom:4px">$1</span>')
     .replace(/^## (.*$)/gim,'<span style="display:block;font-size:14px;font-weight:700;color:#39ff14;margin-top:10px;margin-bottom:4px">$1</span>')
     .replace(/^# (.*$)/gim,'<span style="display:block;font-size:15px;font-weight:800;color:#39ff14;margin-top:10px;margin-bottom:6px">$1</span>')
@@ -380,8 +480,8 @@ export default function LexByte() {
     .replace(/⚠️/g,'<span style="color:#facc15">⚠️</span>')
     .replace(/\n/g,'<br>');
 
-  const sugs = ['¿Puedo despedir a un trabajador que llegó borracho?','¿3 retardos equivalen a una falta?','¿Cuánto dura la incapacidad por maternidad?','¿Cuáles son los días de descanso obligatorio?','¿Qué pago en un despido injustificado?'];
-  const docs = [
+  const sugs=['¿Puedo despedir a un trabajador que llegó borracho?','¿3 retardos equivalen a una falta?','¿Cuánto dura la incapacidad por maternidad?','¿Cuáles son los días de descanso obligatorio?','¿Qué pago en un despido injustificado?'];
+  const docs=[
     {id:'capacitacion',nombre:'Capacitación Inicial',base:'Art. 39-B LFT',ready:true,icon:'ti-file-check'},
     {id:'obra',nombre:'Obra Determinada',base:'Arts. 35-36 LFT',ready:true,icon:'ti-building'},
     {id:'ind',nombre:'Tiempo Indeterminado',base:'Art. 35 LFT',ready:false,icon:'ti-file-text'},
@@ -389,8 +489,7 @@ export default function LexByte() {
     {id:'ren',nombre:'Renuncia Voluntaria',base:'Art. 53 LFT',ready:false,icon:'ti-signature'},
     {id:'fin',nombre:'Finiquito y Liquidación',base:'Arts. 48-50 LFT',ready:false,icon:'ti-cash'},
   ];
-
-  const navItems = [{id:'lex',icon:'ti-scale',label:'Asistente Lex'},{id:'docs',icon:'ti-files',label:'Documentos'},{id:'historial',icon:'ti-folder',label:'Historial'},{id:'config',icon:'ti-settings',label:'Configuración'}];
+  const navItems=[{id:'lex',icon:'ti-scale',label:'Asistente Lex'},{id:'docs',icon:'ti-files',label:'Documentos'},{id:'historial',icon:'ti-folder',label:'Historial'},{id:'config',icon:'ti-settings',label:'Configuración'}];
 
   return (
     <>
@@ -404,8 +503,7 @@ export default function LexByte() {
         .nav-item:hover{background:rgba(57,255,20,0.05)!important;color:rgba(255,255,255,0.75)!important}
         .sug-btn:hover{border-color:#39ff14!important;color:#39ff14!important}
         .doc-card:hover{border-color:rgba(57,255,20,0.4)!important;background:rgba(57,255,20,0.04)!important}
-        input,select,textarea{background:rgba(255,255,255,0.05);border:0.5px solid rgba(57,255,20,0.2);border-radius:8px;color:#fff!important;font-family:'Sora',sans-serif;font-size:13px;padding:9px 12px;outline:none;width:100%}
-        input:focus,select:focus,textarea:focus{border-color:#39ff14}
+        input,select,textarea{font-family:'Sora',sans-serif!important}
         input::placeholder,textarea::placeholder{color:rgba(255,255,255,0.3)!important}
         select option{background:#0b1a2e;color:#fff}
       `}</style>
@@ -450,13 +548,13 @@ export default function LexByte() {
               </div>
               <div style={{fontSize:11,color:'rgba(255,255,255,0.3)',marginTop:2}}>
                 {section==='lex'&&'LFT · LSS · INFONAVIT · SAR · NOM-035'}
-                {section==='docs'&&(docTipo?'Completa los datos y descarga tu contrato':'Selecciona el documento que necesitas')}
+                {section==='docs'&&(docTipo?'Completa los datos — los campos se validan antes de avanzar':'Selecciona el documento que necesitas')}
                 {section==='historial'&&'Documentos generados por tu empresa'}
                 {section==='config'&&'Datos de tu empresa y preferencias'}
               </div>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:10}}>
-              {docTipo && <button onClick={()=>setDocTipo(null)} style={{background:'transparent',color:'rgba(255,255,255,0.4)',border:'0.5px solid rgba(255,255,255,0.1)',borderRadius:8,padding:'6px 14px',fontSize:12,cursor:'pointer',fontFamily:"'Sora',sans-serif"}}>← Documentos</button>}
+              {docTipo&&<button onClick={()=>setDocTipo(null)} style={{background:'transparent',color:'rgba(255,255,255,0.4)',border:'0.5px solid rgba(255,255,255,0.1)',borderRadius:8,padding:'6px 14px',fontSize:12,cursor:'pointer',fontFamily:"'Sora',sans-serif"}}>← Documentos</button>}
               <div style={{fontSize:10,background:'rgba(57,255,20,0.08)',border:'0.5px solid rgba(57,255,20,0.2)',color:V,padding:'4px 12px',borderRadius:20,fontWeight:600}}>{freeLeft} consultas gratis</div>
               <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(57,255,20,0.1)',border:'0.5px solid rgba(57,255,20,0.25)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
                 <i className="ti ti-user" style={{fontSize:15,color:'rgba(255,255,255,0.5)'}} aria-hidden="true"/>
@@ -465,7 +563,7 @@ export default function LexByte() {
           </div>
 
           {/* CHAT */}
-          {section==='lex' && (
+          {section==='lex'&&(
             <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
               <div style={{flex:1,overflowY:'auto',padding:'18px 22px',display:'flex',flexDirection:'column',gap:14}}>
                 {msgs.map((m,i)=>(
@@ -482,7 +580,7 @@ export default function LexByte() {
               {msgs.length<=1&&<div style={{padding:'0 22px 10px',display:'flex',flexWrap:'wrap',gap:7}}>{sugs.map(s=><button key={s} className="sug-btn" onClick={()=>setInput(s)} style={{fontSize:11.5,padding:'5px 13px',borderRadius:20,border:'0.5px solid rgba(57,255,20,0.2)',background:'rgba(57,255,20,0.04)',color:'rgba(255,255,255,0.45)',cursor:'pointer',fontFamily:"'Sora',sans-serif",transition:'all 0.15s'}}>{s}</button>)}</div>}
               <div style={{padding:'12px 22px 18px',borderTop:'0.5px solid rgba(57,255,20,0.08)',display:'flex',gap:10}}>
                 <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Escribe tu consulta laboral..."
-                  style={{flex:1,padding:'11px 15px',background:'rgba(255,255,255,0.04)',border:'0.5px solid rgba(57,255,20,0.2)',borderRadius:10,color:'#fff',fontSize:13,fontFamily:"'Sora',sans-serif",width:'auto'}}/>
+                  style={{flex:1,padding:'11px 15px',background:'rgba(255,255,255,0.04)',border:'0.5px solid rgba(57,255,20,0.2)',borderRadius:10,color:'#fff',fontSize:13,fontFamily:"'Sora',sans-serif",width:'auto',outline:'none'}}/>
                 <button onClick={send} disabled={loading||!input.trim()} style={{background:input.trim()&&!loading?V:'rgba(57,255,20,0.25)',color:F,border:'none',borderRadius:10,padding:'11px 22px',fontFamily:"'Sora',sans-serif",fontWeight:800,fontSize:13,cursor:input.trim()&&!loading?'pointer':'not-allowed',transition:'all 0.15s',flexShrink:0}}>
                   {loading?'...':'Enviar →'}
                 </button>
@@ -490,8 +588,8 @@ export default function LexByte() {
             </div>
           )}
 
-          {/* DOCUMENTOS — catálogo */}
-          {section==='docs' && !docTipo && (
+          {/* CATÁLOGO */}
+          {section==='docs'&&!docTipo&&(
             <div style={{flex:1,overflowY:'auto',padding:22}}>
               <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:14}}>
                 {docs.map(d=>(
@@ -509,7 +607,7 @@ export default function LexByte() {
           )}
 
           {/* FORMULARIO */}
-          {section==='docs' && docTipo && <FormContrato key={docTipo} tipo={docTipo} onDescargar={()=>{}}/>}
+          {section==='docs'&&docTipo&&<FormContrato key={docTipo} tipo={docTipo}/>}
 
           {/* HISTORIAL */}
           {section==='historial'&&<div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:12}}><i className="ti ti-folder-open" style={{fontSize:44,color:'rgba(57,255,20,0.2)'}} aria-hidden="true"/><div style={{fontWeight:600,fontSize:14,color:'rgba(255,255,255,0.4)'}}>Sin documentos aún</div><div style={{fontSize:12,color:'rgba(255,255,255,0.25)'}}>Los contratos generados aparecerán aquí</div></div>}
@@ -522,7 +620,7 @@ export default function LexByte() {
                 {['Nombre o razón social','RFC','Registro patronal IMSS','Correo de contacto','Ciudad / Estado'].map(label=>(
                   <div key={label} style={{marginBottom:14}}>
                     <div style={{fontSize:10,color:'rgba(255,255,255,0.35)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:5}}>{label}</div>
-                    <input placeholder={`Ingresa ${label.toLowerCase()}`}/>
+                    <input placeholder={`Ingresa ${label.toLowerCase()}`} style={{width:'100%',padding:'10px 14px',background:'rgba(255,255,255,0.04)',border:'0.5px solid rgba(57,255,20,0.15)',borderRadius:9,color:'#fff',fontSize:13,fontFamily:"'Sora',sans-serif",outline:'none'}}/>
                   </div>
                 ))}
                 <button style={{background:V,color:F,border:'none',borderRadius:9,padding:'11px 26px',fontSize:13,fontWeight:800,cursor:'pointer',fontFamily:"'Sora',sans-serif",marginTop:8}}>Guardar cambios</button>
