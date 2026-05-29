@@ -1,4 +1,4 @@
-use client';
+'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
