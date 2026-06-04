@@ -13,7 +13,7 @@ function r(text: string, bold = false, size = 20) {
 function p(children: TextRun[], opts: { align?: string; before?: number; after?: number; spacing?: number } = {}) {
   return new Paragraph({
     children,
-    alignment: (opts.align || 'both') as AlignmentType,
+  alignment: (opts.align || 'both') as any,
     spacing: { before: opts.before ?? 80, after: opts.after ?? 80, line: opts.spacing ?? 276 },
   });
 }
