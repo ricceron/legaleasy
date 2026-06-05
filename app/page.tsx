@@ -25,6 +25,22 @@ function validarSalario(sal: string) {
   return parseFloat(sal) >= 248.93;
 }
 
+const LIMITES_JORNADA: Record<string, number> = { diurna: 8, nocturna: 7, mixta: 7.5 };
+
+// Jornada efectiva (Arts. 61, 63 y 64 LFT).
+// Discontinua = el trabajador puede salir a comer fuera → la comida NO se computa (Art. 64 a contrario).
+// Continua = no puede salir → la comida SÍ se computa como tiempo efectivo (Art. 64).
+function calcularJornada(entrada: string, salida: string, duracionComidaMin: number, continua: boolean) {
+  if (!entrada || !salida) return { spanHoras: 0, horasEfectivas: 0 };
+  const [hE, mE] = entrada.split(':').map(Number);
+  const [hS, mS] = salida.split(':').map(Number);
+  let spanMin = hS * 60 + mS - (hE * 60 + mE);
+  if (spanMin <= 0) spanMin += 1440; // jornada que cruza medianoche
+  const spanHoras = spanMin / 60;
+  const horasEfectivas = continua ? spanHoras : spanHoras - duracionComidaMin / 60;
+  return { spanHoras, horasEfectivas };
+}
+
 interface ErrorMap { [key: string]: string }
 
 function validarPaso(paso: number, tipo: DocTipo, refs: any): ErrorMap {
@@ -78,7 +94,20 @@ function validarPaso(paso: number, tipo: DocTipo, refs: any): ErrorMap {
     if (!v(refs.jornadaEntrada)) errs.jornadaEntrada = 'Requerido';
     if (!v(refs.jornadaSalida)) errs.jornadaSalida = 'Requerido';
     if (v(refs.jornadaEntrada) && v(refs.jornadaSalida)) {
-      if (v(refs.jornadaEntrada) >= v(refs.jornadaSalida)) errs.jornadaSalida = '⚠️ La salida debe ser posterior a la entrada';
+      const tipoJ = v(refs.jornadaTipo) || 'diurna';
+      const continua = v(refs.jornadaContinua) === 'continua';
+      const dur = Number(v(refs.jornadaDuracionComida) || '60');
+      const limite = LIMITES_JORNADA[tipoJ] ?? 8;
+      const { horasEfectivas } = calcularJornada(v(refs.jornadaEntrada), v(refs.jornadaSalida), dur, continua);
+      if (horasEfectivas <= 0) {
+        errs.jornadaSalida = '⚠️ La salida debe ser posterior a la entrada';
+      } else if (horasEfectivas > limite + 0.001) {
+        errs.jornadaSalida = `⚠️ Jornada efectiva de ${horasEfectivas.toFixed(2)} h excede el máximo de ${limite} h para jornada ${tipoJ} (Art. 61 LFT)`;
+      }
+      // Art. 63 LFT: descanso mínimo de 30 min en jornada continua
+      if (continua && dur < 30) {
+        errs.jornadaDuracionComida = '⚠️ La jornada continua requiere descanso mínimo de 30 min (Art. 63 LFT)';
+      }
     }
   }
   return errs;
@@ -91,6 +120,7 @@ function FormContrato({ tipo }: { tipo: DocTipo }) {
   const [analisis, setAnalisis] = useState<any>(null);
   const [analizando, setAnalizando] = useState(false);
   const [generando, setGenerando] = useState(false);
+  const [previewJornada, setPreviewJornada] = useState<{spanHoras:number;horasEfectivas:number}>({spanHoras:0,horasEfectivas:0});
 
   const refs: any = {
     patronNombre: useRef<HTMLInputElement>(null),
@@ -126,6 +156,9 @@ function FormContrato({ tipo }: { tipo: DocTipo }) {
     jornadaTipo: useRef<HTMLSelectElement>(null),
     jornadaEntrada: useRef<HTMLInputElement>(null),
     jornadaSalida: useRef<HTMLInputElement>(null),
+    jornadaContinua: useRef<HTMLSelectElement>(null),
+    jornadaDuracionComida: useRef<HTMLSelectElement>(null),
+    jornadaInicioComida: useRef<HTMLInputElement>(null),
     jornadaDescanso: useRef<HTMLSelectElement>(null),
     jornadaPago: useRef<HTMLSelectElement>(null),
     benef0nombre: useRef<HTMLInputElement>(null),
@@ -166,6 +199,7 @@ function FormContrato({ tipo }: { tipo: DocTipo }) {
       condActividades: 'Atención y seguimiento a clientes\nElaboración de cotizaciones\nCierre de ventas y negociación\nReporte semanal de resultados',
       jornadaEntrada: '09:00',
       jornadaSalida: '18:00',
+      jornadaInicioComida: '14:00',
       benef0nombre: 'Carlos López Martínez',
       benef0parentesco: 'Cónyuge',
       benef0pct: '100',
@@ -180,8 +214,11 @@ function FormContrato({ tipo }: { tipo: DocTipo }) {
       if (refs.trabSexo.current) refs.trabSexo.current.value = 'FEMENINO';
       if (refs.duracion.current) refs.duracion.current.value = '90';
       if (refs.jornadaTipo.current) refs.jornadaTipo.current.value = 'diurna';
+      if (refs.jornadaContinua.current) refs.jornadaContinua.current.value = 'discontinua';
+      if (refs.jornadaDuracionComida.current) refs.jornadaDuracionComida.current.value = '60';
       if (refs.jornadaDescanso.current) refs.jornadaDescanso.current.value = 'domingo';
       if (refs.jornadaPago.current) refs.jornadaPago.current.value = 'quincenalmente';
+      recalcularJornada();
     }, 150);
   }, []);
   // ── FIN DATOS DE PRUEBA ──
@@ -220,6 +257,15 @@ function FormContrato({ tipo }: { tipo: DocTipo }) {
     jornadaTipo: refs.jornadaTipo.current?.value||'diurna',
     jornadaEntrada: refs.jornadaEntrada.current?.value||'',
     jornadaSalida: refs.jornadaSalida.current?.value||'',
+    jornadaContinua: refs.jornadaContinua.current?.value||'discontinua',
+    jornadaDuracionComida: Number(refs.jornadaDuracionComida.current?.value||'60'),
+    jornadaInicioComida: refs.jornadaInicioComida.current?.value||'14:00',
+    horasEfectivas: calcularJornada(
+      refs.jornadaEntrada.current?.value||'',
+      refs.jornadaSalida.current?.value||'',
+      Number(refs.jornadaDuracionComida.current?.value||'60'),
+      (refs.jornadaContinua.current?.value||'discontinua') === 'continua',
+    ).horasEfectivas,
     jornadaDescanso: refs.jornadaDescanso.current?.value||'domingo',
     jornadaPago: refs.jornadaPago.current?.value||'semanalmente',
     beneficiarios: [0,1,2].map(i=>({
@@ -234,6 +280,16 @@ function FormContrato({ tipo }: { tipo: DocTipo }) {
     if (Object.keys(errs).length > 0) { setErrores(errs); return; }
     setErrores({});
     setPaso(p => p + 1);
+  };
+
+  const recalcularJornada = () => {
+    const continua = (refs.jornadaContinua.current?.value || 'discontinua') === 'continua';
+    const dur = Number(refs.jornadaDuracionComida.current?.value || '60');
+    setPreviewJornada(calcularJornada(
+      refs.jornadaEntrada.current?.value || '',
+      refs.jornadaSalida.current?.value || '',
+      dur, continua,
+    ));
   };
 
   const analizarContrato = async () => {
@@ -375,13 +431,47 @@ function FormContrato({ tipo }: { tipo: DocTipo }) {
         {/* PASO 3 — JORNADA */}
         <div style={{display:paso===3?'block':'none'}}>
           <div style={rowSt}>
-            <div style={fldSt}><label style={labSt}>Tipo de jornada</label><select ref={refs.jornadaTipo} style={inpSt('')} defaultValue="diurna"><option value="diurna">Diurna (máx. 8 h)</option><option value="nocturna">Nocturna (máx. 7 h)</option><option value="mixta">Mixta (máx. 7.5 h)</option></select></div>
+            <div style={fldSt}><label style={labSt}>Tipo de jornada</label><select ref={refs.jornadaTipo} onChange={recalcularJornada} style={inpSt('')} defaultValue="diurna"><option value="diurna">Diurna (máx. 8 h)</option><option value="nocturna">Nocturna (máx. 7 h)</option><option value="mixta">Mixta (máx. 7.5 h)</option></select></div>
             <div style={fldSt}><label style={labSt}>Día de descanso semanal</label><select ref={refs.jornadaDescanso} style={inpSt('')} defaultValue="domingo"><option value="lunes">Lunes</option><option value="martes">Martes</option><option value="miércoles">Miércoles</option><option value="jueves">Jueves</option><option value="viernes">Viernes</option><option value="sábado">Sábado</option><option value="domingo">Domingo</option></select></div>
           </div>
           <div style={rowSt}>
-            <div style={fldSt}><label style={labSt}>Hora de entrada *</label><input ref={refs.jornadaEntrada} type="time" style={inpSt('jornadaEntrada')}/><ErrMsg campo="jornadaEntrada"/></div>
-            <div style={fldSt}><label style={labSt}>Hora de salida *</label><input ref={refs.jornadaSalida} type="time" style={inpSt('jornadaSalida')}/><ErrMsg campo="jornadaSalida"/></div>
+            <div style={fldSt}><label style={labSt}>Hora de entrada *</label><input ref={refs.jornadaEntrada} onChange={recalcularJornada} type="time" style={inpSt('jornadaEntrada')}/><ErrMsg campo="jornadaEntrada"/></div>
+            <div style={fldSt}><label style={labSt}>Hora de salida *</label><input ref={refs.jornadaSalida} onChange={recalcularJornada} type="time" style={inpSt('jornadaSalida')}/><ErrMsg campo="jornadaSalida"/></div>
           </div>
+          <div style={rowSt}>
+            <div style={fldSt}>
+              <label style={labSt}>¿Puede salir del centro a comer?</label>
+              <select ref={refs.jornadaContinua} onChange={recalcularJornada} style={inpSt('')} defaultValue="discontinua">
+                <option value="discontinua">Sí — sale a comer fuera (jornada discontinua)</option>
+                <option value="continua">No — permanece en el lugar (jornada continua)</option>
+              </select>
+            </div>
+            <div style={fldSt}>
+              <label style={labSt}>Duración de la comida</label>
+              <select ref={refs.jornadaDuracionComida} onChange={recalcularJornada} style={inpSt('jornadaDuracionComida')} defaultValue="60">
+                <option value="30">30 minutos</option>
+                <option value="60">1 hora</option>
+                <option value="90">1.5 horas</option>
+                <option value="120">2 horas</option>
+              </select>
+              <ErrMsg campo="jornadaDuracionComida"/>
+            </div>
+          </div>
+          <div style={fldSt}><label style={labSt}>Hora de inicio de la comida</label><input ref={refs.jornadaInicioComida} type="time" defaultValue="14:00" style={inpSt('')}/></div>
+          {(() => {
+            const tipoJ = refs.jornadaTipo.current?.value || 'diurna';
+            const limite = LIMITES_JORNADA[tipoJ] ?? 8;
+            const continua = (refs.jornadaContinua.current?.value || 'discontinua') === 'continua';
+            const dur = Number(refs.jornadaDuracionComida.current?.value || '60');
+            const ok = previewJornada.horasEfectivas > 0 && previewJornada.horasEfectivas <= limite + 0.001;
+            const aviso = !continua && dur > 60;
+            return (
+              <div style={{marginTop:4,padding:'10px 14px',background:ok?'rgba(57,255,20,0.05)':'rgba(239,68,68,0.07)',border:`0.5px solid ${ok?'rgba(57,255,20,0.18)':'rgba(239,68,68,0.25)'}`,borderRadius:8,fontSize:12.5,color:'rgba(255,255,255,0.6)'}}>
+                <div>Presencia: <strong style={{color:'#fff'}}>{previewJornada.spanHoras.toFixed(2)} h</strong> · Jornada efectiva: <strong style={{color:ok?V:'#fca5a5'}}>{previewJornada.horasEfectivas.toFixed(2)} h</strong> (límite {tipoJ}: {limite} h) {ok?'✅':'❌'}</div>
+                {aviso && <div style={{marginTop:6,fontSize:11.5,color:'#fde68a'}}>⚠️ Comida mayor a 1 h: verifica que refleje la operación real; una comida larga "a modo" puede recaracterizarse como tiempo efectivo (simulación).</div>}
+              </div>
+            );
+          })()}
           <div style={fldSt}><label style={labSt}>Periodicidad de pago</label><select ref={refs.jornadaPago} style={inpSt('')} defaultValue="semanalmente"><option value="semanalmente">Semanal</option><option value="quincenalmente">Quincenal</option></select></div>
           <div style={{marginTop:12,padding:'10px 14px',background:'rgba(57,255,20,0.05)',border:'0.5px solid rgba(57,255,20,0.15)',borderRadius:8,fontSize:12,color:'rgba(255,255,255,0.5)'}}>
             🔒 Confidencialidad post-contrato: <strong style={{color:V}}>5 años</strong> — estándar LexByte para todos los contratos.
