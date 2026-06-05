@@ -13,25 +13,17 @@ function r(text: string, bold = false, size = 20) {
 function p(children: TextRun[], opts: { align?: string; before?: number; after?: number; spacing?: number } = {}) {
   return new Paragraph({
     children,
-  alignment: (opts.align || 'both') as any,
+    alignment: (opts.align || 'both') as any,
     spacing: { before: opts.before ?? 80, after: opts.after ?? 80, line: opts.spacing ?? 276 },
   });
 }
 
-function pBullet(doc_ref: string, text: string, bold = false) {
+function pBullet(ref: string, text: string, bold = false) {
   return new Paragraph({
-    numbering: { reference: doc_ref, level: 0 },
+    numbering: { reference: ref, level: 0 },
     children: [r(text, bold)],
     spacing: { before: 60, after: 60, line: 276 },
     alignment: AlignmentType.BOTH,
-  });
-}
-
-function sep() {
-  return new Paragraph({
-    children: [],
-    border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'AAAAAA' } },
-    spacing: { before: 120, after: 120 },
   });
 }
 
@@ -71,7 +63,15 @@ function cuerpo(children: TextRun[]) {
   return p(children, { before: 40, after: 60, spacing: 276 });
 }
 
-function firmaTable(izq: string, izqNombre: string, der: string, derNombre: string) {
+function linea() {
+  return new Paragraph({
+    children: [r('________________________________')],
+    alignment: AlignmentType.LEFT,
+    spacing: { before: 200, after: 40 },
+  });
+}
+
+function firmaTable(izqTitulo: string, izqNombre: string, derTitulo: string, derNombre: string) {
   const nb = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
   const bords = { top: nb, bottom: nb, left: nb, right: nb };
   const w = 4680;
@@ -81,44 +81,55 @@ function firmaTable(izq: string, izqNombre: string, der: string, derNombre: stri
     rows: [
       new TableRow({ children: [
         new TableCell({ borders: bords, width: { size: w, type: WidthType.DXA }, children: [
-          p([r('________________________________')], { align: 'left' }),
+          new Paragraph({ children: [r('________________________________')], alignment: AlignmentType.LEFT, spacing: { before: 0, after: 40 } }),
+          new Paragraph({ children: [r(izqTitulo, true)], alignment: AlignmentType.LEFT, spacing: { before: 0, after: 20 } }),
+          new Paragraph({ children: [r(izqNombre, true)], alignment: AlignmentType.LEFT, spacing: { before: 0, after: 0 } }),
         ]}),
         new TableCell({ borders: bords, width: { size: w, type: WidthType.DXA }, children: [
-          p([r('________________________________')], { align: 'left' }),
-        ]}),
-      ]}),
-      new TableRow({ children: [
-        new TableCell({ borders: bords, width: { size: w, type: WidthType.DXA }, children: [
-          p([r(izq, true)], { align: 'left' }),
-          p([r(izqNombre, true)], { align: 'left' }),
-        ]}),
-        new TableCell({ borders: bords, width: { size: w, type: WidthType.DXA }, children: [
-          p([r(der, true)], { align: 'left' }),
-          p([r(derNombre, true)], { align: 'left' }),
+          new Paragraph({ children: [r('________________________________')], alignment: AlignmentType.LEFT, spacing: { before: 0, after: 40 } }),
+          new Paragraph({ children: [r(derTitulo, true)], alignment: AlignmentType.LEFT, spacing: { before: 0, after: 20 } }),
+          new Paragraph({ children: [r(derNombre, true)], alignment: AlignmentType.LEFT, spacing: { before: 0, after: 0 } }),
         ]}),
       ]}),
     ],
   });
 }
 
-function tablaAnexoA(headers: string[], rows: string[][], widths: number[]) {
+function tablaVacaciones() {
+  const b = { style: BorderStyle.SINGLE, size: 4, color: 'CCCCCC' };
+  const bords = { top: b, bottom: b, left: b, right: b };
+  const rows = [['1', '12 días'], ['2', '14 días'], ['3', '16 días'], ['4', '18 días']];
+  return new Table({
+    width: { size: 9360, type: WidthType.DXA },
+    columnWidths: [4680, 4680],
+    rows: [
+      new TableRow({ children: [
+        new TableCell({ borders: bords, width: { size: 4680, type: WidthType.DXA }, shading: { fill: 'D5E8F0', type: ShadingType.CLEAR }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, children: [new Paragraph({ children: [r('AÑOS DE SERVICIOS', true)], alignment: AlignmentType.CENTER })] }),
+        new TableCell({ borders: bords, width: { size: 4680, type: WidthType.DXA }, shading: { fill: 'D5E8F0', type: ShadingType.CLEAR }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, children: [new Paragraph({ children: [r('DIAS DE VACACIONES', true)], alignment: AlignmentType.CENTER })] }),
+      ]}),
+      ...rows.map(([anio, dias]) => new TableRow({ children: [
+        new TableCell({ borders: bords, width: { size: 4680, type: WidthType.DXA }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, children: [new Paragraph({ children: [r(anio)], alignment: AlignmentType.CENTER })] }),
+        new TableCell({ borders: bords, width: { size: 4680, type: WidthType.DXA }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, children: [new Paragraph({ children: [r(dias)], alignment: AlignmentType.CENTER })] }),
+      ]})),
+    ],
+  });
+}
+
+function tablaAnexoA(actividades: string[]) {
   const b = { style: BorderStyle.SINGLE, size: 4, color: 'CCCCCC' };
   const bords = { top: b, bottom: b, left: b, right: b };
   return new Table({
-    width: { size: widths.reduce((a, v) => a + v, 0), type: WidthType.DXA },
-    columnWidths: widths,
+    width: { size: 9360, type: WidthType.DXA },
+    columnWidths: [600, 8760],
     rows: [
-      new TableRow({ children: headers.map((h, i) => new TableCell({
-        borders: bords, width: { size: widths[i], type: WidthType.DXA },
-        shading: { fill: 'D5E8F0', type: ShadingType.CLEAR },
-        margins: { top: 60, bottom: 60, left: 100, right: 100 },
-        children: [new Paragraph({ children: [r(h, true)], alignment: AlignmentType.CENTER })],
-      })) }),
-      ...rows.map(row => new TableRow({ children: row.map((cell, i) => new TableCell({
-        borders: bords, width: { size: widths[i], type: WidthType.DXA },
-        margins: { top: 60, bottom: 60, left: 100, right: 100 },
-        children: [new Paragraph({ children: [r(cell)], alignment: i === 0 ? AlignmentType.CENTER : AlignmentType.BOTH })],
-      })) })),
+      new TableRow({ children: [
+        new TableCell({ borders: bords, width: { size: 600, type: WidthType.DXA }, shading: { fill: 'D5E8F0', type: ShadingType.CLEAR }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, children: [new Paragraph({ children: [r('N°', true)], alignment: AlignmentType.CENTER })] }),
+        new TableCell({ borders: bords, width: { size: 8760, type: WidthType.DXA }, shading: { fill: 'D5E8F0', type: ShadingType.CLEAR }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, children: [new Paragraph({ children: [r('Descripción del Puesto', true)], alignment: AlignmentType.CENTER })] }),
+      ]}),
+      ...actividades.map((act, i) => new TableRow({ children: [
+        new TableCell({ borders: bords, width: { size: 600, type: WidthType.DXA }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, children: [new Paragraph({ children: [r(`${i + 1}.-`)], alignment: AlignmentType.CENTER })] }),
+        new TableCell({ borders: bords, width: { size: 8760, type: WidthType.DXA }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, children: [new Paragraph({ children: [r(act.trim())], alignment: AlignmentType.BOTH })] }),
+      ]})),
     ],
   });
 }
@@ -158,25 +169,21 @@ async function generarCapacitacion(D: any): Promise<Buffer> {
   const trabNombre = D.trabNombre.toUpperCase();
   const representante = (D.patronRepresentante || D.patronNombre).toUpperCase();
   const fechaDoc = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+  const ciudadUp = D.patronCiudad.toUpperCase();
   const actividades = (D.condActividades || 'Actividades del puesto').split('\n').filter((a: string) => a.trim());
 
   const doc = new Document({
     numbering: {
       config: [
         {
-          reference: 'patron-bullets',
+          reference: 'bullets',
           levels: [{ level: 0, format: LevelFormat.BULLET, text: '-', alignment: AlignmentType.LEFT,
             style: { paragraph: { indent: { left: 360, hanging: 360 } } } }],
         },
         {
-          reference: 'trab-bullets',
+          reference: 'instructivo',
           levels: [{ level: 0, format: LevelFormat.BULLET, text: '-', alignment: AlignmentType.LEFT,
             style: { paragraph: { indent: { left: 360, hanging: 360 } } } }],
-        },
-        {
-          reference: 'anexo-numbers',
-          levels: [{ level: 0, format: LevelFormat.DECIMAL, text: '%1.-', alignment: AlignmentType.LEFT,
-            style: { paragraph: { indent: { left: 720, hanging: 360 } } } }],
         },
       ],
     },
@@ -189,13 +196,13 @@ async function generarCapacitacion(D: any): Promise<Buffer> {
         },
       },
       children: [
+
         // ── ENCABEZADO ──
-        titulo(`CAPACITACIÓN INICIAL (${durLetra} DIAS)`),
-        new Paragraph({ children: [], spacing: { before: 0, after: 80 } }),
+        p([r(`CAPACITACIÓN INICIAL (${durLetra} DIAS)`, true, 24)], { align: 'center', before: 0, after: 120 }),
         cuerpo([
           r('CONTRATO INDIVIDUAL DE TRABAJO PARA CAPACITACIÓN INICIAL POR TIEMPO FIJO Y DETERMINADO QUE CELEBRAN POR UNA PARTE '),
           r(patronNombre, true),
-          r(' QUIEN ACTUA POR SU PROPIO DERECHO Y A QUIEN EN LO SUCESIVO SE DENOMINARÁ "EL PATRON" Y POR LA OTRA, POR SU PROPIO DERECHO '),
+          r(' A QUIEN EN LO SUCESIVO SE DENOMINARÁ "EL PATRON" Y POR LA OTRA, POR SU PROPIO DERECHO '),
           r(trabNombre, true),
           r(' EN LO SUCESIVO "EL TRABAJADOR", AL TENOR DE LAS CLÁUSULAS QUE OTORGAN EN VISTA DE LAS SIGUIENTES:'),
         ]),
@@ -204,21 +211,21 @@ async function generarCapacitacion(D: any): Promise<Buffer> {
         seccion('D E C L A R A C I O N E S'),
         cuerpo([r('DECLARACIONES DE "EL PATRON":', true)]),
 
-        pBullet('patron-bullets', `Que es una persona ${D.patronTipo === 'fisica' ? 'física' : 'moral'} con capacidad legal para celebrar este contrato.`),
-        pBullet('patron-bullets', `Que se encuentra inscrito en el Registro Federal de Contribuyentes ${D.patronRFC}, así mismo señala como su domicilio el ubicado en ${D.patronDomicilio} en ${D.patronCiudad}.`),
-        pBullet('patron-bullets', `Se encuentra debidamente inscrito ante el Instituto Mexicano del Seguro Social del quien tiene el Registro Patronal número ${D.patronRegIMSS}.`),
-        pBullet('patron-bullets', `Que en el citado domicilio viene realizando sus actividades y que para tal fin requieren la contratación de personal calificado y con capacidades que le permitan aprender, adquirir conocimientos y habilidades necesarios para el desarrollo de las actividades de la Empresa en el puesto que más adelante se menciona y cuyas características están descritas en el "ANEXO A" que forma parte integrante de este Contrato, para lo cual es necesario en primer término llevar a cabo una etapa de "CAPACITACIÓN INICIAL" para poder evaluar las capacidades reales de la persona que le permitan ejecutar el trabajo y ser elegible para una contratación definitiva o bien eventual y temporal.`),
-        pBullet('patron-bullets', `Bajo estas condiciones requiere la contratación de personal que tenga las características señaladas en el citado "ANEXO A" y la posibilidad de participar en un proceso de capacitación inicial de ${D.duracion} días que podrá ampliarse por determinación de la "EL PATRON", lo que servirá de base para determinar si se continúa con el siguiente modulo o periodo o bien se da por terminado el contrato y la relación que de él emana dentro de la particularidad de capacitación inicial a que se refiere el artículo 39-B de la Ley Federal del Trabajo.`),
+        pBullet('bullets', `Que es una persona ${D.patronTipo === 'fisica' ? 'física' : 'moral'} con capacidad legal para celebrar este contrato.`),
+        pBullet('bullets', `Que se encuentra inscrito en el Registro Federal de Contribuyentes ${D.patronRFC}, así mismo señala como su domicilio el ubicado en ${D.patronDomicilio} en ${D.patronCiudad}.`),
+        pBullet('bullets', `Se encuentra debidamente inscrito ante el Instituto Mexicano del Seguro Social del quien tiene el Registro Patronal número ${D.patronRegIMSS}.`),
+        pBullet('bullets', `Que en el citado domicilio viene realizando sus actividades y que para tal fin requieren la contratación de personal calificado y con capacidades que le permitan aprender, adquirir conocimientos y habilidades necesarios para el desarrollo de las actividades de la Empresa en el puesto que más adelante se menciona y cuyas características están descritas en el "ANEXO A" que forma parte integrante de este Contrato, para lo cual es necesario en primer término llevar a cabo una etapa de "CAPACITACIÓN INICIAL" para poder evaluar las capacidades reales de la persona que le permitan ejecutar el trabajo y ser elegible para una contratación definitiva o bien eventual y temporal.`),
+        pBullet('bullets', `Bajo estas condiciones requiere la contratación de personal que tenga las características señaladas en el citado "ANEXO A" y la posibilidad de participar en un proceso de capacitación inicial de ${D.duracion} días que podrá ampliarse por determinación de la "EL PATRON", lo que servirá de base para determinar si se continúa con el siguiente modulo o periodo o bien se da por terminado el contrato y la relación que de él emana dentro de la particularidad de capacitación inicial a que se refiere el artículo 39-B de la Ley Federal del Trabajo.`),
 
         new Paragraph({ children: [], spacing: { before: 80, after: 40 } }),
         cuerpo([r('DECLARA "EL TRABAJADOR":', true)]),
 
-        pBullet('trab-bullets', `Ser una persona física del sexo ${D.trabSexo === 'FEMENINO' ? 'femenino' : 'masculino'}, con fecha de nacimiento ${D.trabNacimiento}, Nacionalidad ${D.trabNacionalidad || 'Mexicana'} con Registro Federal de contribuyentes ${D.trabRFC}, Clave Única de Registro de Población ${D.trabCURP} y con domicilio ${D.trabDomicilio}, contar con número de Seguridad Social ${D.trabNSS}.`),
-        pBullet('trab-bullets', 'No tener impedimento alguno para celebrar el presente Contrato y obligarse en los términos de este, ya que cuenta con capacidad, aptitudes y la disponibilidad de tiempo requeridos, así como con el interés, disponibilidad y voluntad de recibir la capacitación inicial objeto de este con pleno conocimiento de sus particularidades y características que se detallan en el cuerpo de este Contrato incluido el Anexo "A" el cual ha leído detenidamente.'),
+        pBullet('bullets', `Ser una persona física del sexo ${D.trabSexo === 'FEMENINO' ? 'femenino' : 'masculino'}, con fecha de nacimiento ${D.trabNacimiento}, Nacionalidad ${D.trabNacionalidad || 'Mexicana'} con Registro Federal de contribuyentes ${D.trabRFC}, Clave Única de Registro de Población ${D.trabCURP} y con domicilio ${D.trabDomicilio}, contar con número de Seguridad Social ${D.trabNSS}.`),
+        pBullet('bullets', 'No tener impedimento alguno para celebrar el presente Contrato y obligarse en los términos de este, ya que cuenta con capacidad, aptitudes y la disponibilidad de tiempo requeridos, así como con el interés, disponibilidad y voluntad de recibir la capacitación inicial objeto de este con pleno conocimiento de sus particularidades y características que se detallan en el cuerpo de este Contrato incluido el Anexo "A" el cual ha leído detenidamente.'),
 
         new Paragraph({ children: [], spacing: { before: 80, after: 40 } }),
         cuerpo([r('DECLARAN "LAS PARTES":', true)]),
-        pBullet('patron-bullets', 'Que estando de acuerdo con lo expresado en estas declaraciones proceden a celebrar este Contrato bajo las siguientes:'),
+        pBullet('bullets', 'Que estando de acuerdo con lo expresado en estas declaraciones proceden a celebrar este Contrato bajo las siguientes:'),
 
         // ── CLÁUSULAS ──
         seccion('C L Á U S U L A S'),
@@ -246,7 +253,9 @@ async function generarCapacitacion(D: any): Promise<Buffer> {
         cuerpo([r(`"LAS PARTES" convienen en establecer como lugar de la prestación de servicios, el o los domicilios con que cuenta "EL PATRON" y en principio en el que ha quedado señalado en el cuerpo de este Contrato, sin perjuicio de que conforme a las necesidades y requerimientos de la misma, sin modificar su objeto, esta podrá en todo tiempo, asignar a "EL TRABAJADOR" para recibir la capacitación inicial en cualquier otro lugar que la empresa habilite en ${D.patronCiudad} y área Metropolitana, con lo que también están de acuerdo las partes.`)]),
 
         clausulaTitulo('QUINTA.-'),
-        cuerpo([r(`La duración de la jornada de trabajo será la ${D.jornadaTipo}, con un horario de ${D.jornadaEntrada} a ${D.jornadaSalida} horas, con descanso los días ${D.jornadaDescanso}, en el entendido que podrá quedar distribuida en los días de la semana que "EL PATRON" determine conforme a sus necesidades y/o los lineamientos relativos al objeto del contrato, estando facultada en todo tiempo a realizar los ajustes que se requieran respecto de los días laborables y horarios establecidos, de acuerdo con los requerimientos de producción y a redistribuir la Jornada de Trabajo.`)]),
+        cuerpo([
+          r(`La duración de la jornada de trabajo será la ${D.jornadaTipo}, con un horario de ${D.jornadaEntrada} a ${D.jornadaSalida} horas, comprendiendo dentro de ese periodo una hora destinada a que "EL TRABAJADOR" tome sus alimentos fuera del centro de trabajo, la cual no se computará como tiempo de la jornada laboral conforme al artículo 63 de la Ley Federal del Trabajo, quedando la jornada efectiva de trabajo en ${D.jornadaTipo === 'diurna' ? '8' : D.jornadaTipo === 'nocturna' ? '7' : '7.5'} horas diarias. "EL PATRON" podrá en todo momento ajustar los días laborables y redistribuir el horario conforme a sus necesidades operativas y a los requerimientos del objeto del contrato, sin que dichos ajustes impliquen una modificación sustancial de las condiciones de trabajo, con descanso semanal los días ${D.jornadaDescanso}.`),
+        ]),
 
         clausulaTitulo('SEXTA.-'),
         cuerpo([
@@ -254,11 +263,11 @@ async function generarCapacitacion(D: any): Promise<Buffer> {
           r(`$${D.condSalario} M.N.`, true),
           r(` como sueldo diario integrado, sujeta a las deducciones y/o retenciones que legal o contractualmente correspondan, pagaderos ${D.jornadaPago}, a la hora que fije "EL PATRON" durante la jornada de trabajo. Queda bien entendido que si cualquiera de los días destinados para el pago es inhábil éste se hará el día anterior, en la forma y términos convenidos.`),
         ]),
-        cuerpo([r('"EL TRABAJADOR" está obligado a otorgar y firmar los recibos que sean necesarios, en los que se incluyan impuestos y otras deducciones correspondientes, constituyendo los mismos el finiquito más amplio que en derecho proceda hasta el día de su suscripción.')]),
+        cuerpo([r('"EL TRABAJADOR" está obligado a otorgar y firmar los recibos que sean necesarios, en los que se incluyan impuestos y otras deducciones correspondientes. Dichos recibos únicamente acreditan el pago de los conceptos en ellos descritos y no extinguen prestaciones adicionales derivadas de la relación laboral.')]),
         cuerpo([r('Para mayor seguridad del "TRABAJADOR", con su expreso consentimiento y por acuerdo de las partes, a efecto de cumplir con esta obligación "EL PATRON" podrá realizar el pago del salario y prestaciones mediante depósitos en la cuenta bancaria del "TRABAJADOR" sirviendo de comprobante de pago las constancias de tales depósitos, sin perjuicio de la obligación por parte del "TRABAJADOR" de firmar los recibos correspondientes.')]),
 
         clausulaTitulo('SÉPTIMA.-'),
-        cuerpo([r('Queda establecido que cuando "EL PATRON" conforme a sus necesidades ordene a "EL TRABAJADOR" laborar tiempo extra, el mismo estará obligado a prestar sus servicios en dicha jornada extraordinaria con el límite establecido por el artículo 66 de la Ley Federal del Trabajo, y le será pagado de conformidad con lo establecido en dicho ordenamiento, bien entendido que "EL PATRON" no estará obligada a pagar el tiempo extraordinario que labore dicho "TRABAJADOR" si no cuenta con la orden por escrito, de la cual deberá conservar una copia para cualquier aclaración futura.')]),
+        cuerpo([r('Queda establecido que cuando "EL PATRON" conforme a sus necesidades requiera que "EL TRABAJADOR" labore tiempo extra, el mismo estará obligado a prestar sus servicios en dicha jornada extraordinaria con el límite establecido por el artículo 66 de la Ley Federal del Trabajo, y le será pagado de conformidad con lo establecido en dicho ordenamiento. El tiempo extraordinario efectivamente laborado podrá acreditarse por cualquier medio de prueba admitido en derecho. "EL TRABAJADOR" deberá reportar de inmediato a su jefe inmediato cualquier tiempo extra laborado sin instrucción previa, a fin de que "EL PATRON" pueda llevar el control correspondiente.')]),
 
         clausulaTitulo('OCTAVA.-'),
         cuerpo([r('"EL TRABAJADOR" tendrá derecho a recibir el pago de las prestaciones que se detallan y se describen en el "ANEXO B" del Contrato el cual firmado por "LAS PARTES" forma parte integrante del mismo y que sustituyen, por ser superiores, a las establecidas en la Ley Federal del Trabajo.')]),
@@ -278,7 +287,7 @@ async function generarCapacitacion(D: any): Promise<Buffer> {
         cuerpo([r('"LAS PARTES" convienen en que es causa especial de rescisión de este contrato la violación de esta cláusula, independientemente de las acciones civiles y penales que se pudieran ejercitar en contra del "TRABAJADOR" por tal conducta.')]),
 
         clausulaTitulo('DÉCIMA TERCERA.- DAÑOS Y PERJUICIOS.-'),
-        cuerpo([r('"EL TRABAJADOR" deberá cumplir con todas las instrucciones de carácter administrativo o de operación que reciba de "EL PATRON" y/o del Jefe inmediato superior, siendo responsable de los daños y perjuicios que se causen a esta o por el incumplimiento de dichas instrucciones, estando conforme en que el importe de los mismos le sea descontado de sus salarios, en los términos de la fracción I del artículo 110 de la Ley Federal del Trabajo.')]),
+        cuerpo([r('"EL TRABAJADOR" deberá cumplir con todas las instrucciones de carácter administrativo o de operación que reciba de "EL PATRON" y/o del Jefe inmediato superior. En caso de que "EL TRABAJADOR" cause daños o perjuicios a "EL PATRON" por dolo o negligencia grave, éste último podrá ejercer las acciones legales que correspondan conforme a la Ley Federal del Trabajo y la legislación civil aplicable. Cualquier descuento salarial únicamente podrá realizarse en los supuestos y con los límites previstos en el artículo 110 de la Ley Federal del Trabajo, sin que sea procedente el descuento por daños derivados de la operación ordinaria.')]),
 
         clausulaTitulo('DÉCIMA CUARTA.-'),
         cuerpo([r('"LAS PARTES" se obligan a sujetarse a las disposiciones que en relación a la capacitación, adiestramiento y productividad establece el Artículo 153-A al 153-V de la Ley de la materia de acuerdo con los planes y programas que al efecto se establezcan, quedando obligado "EL TRABAJADOR" a cumplir con todas las obligaciones que le correspondan.')]),
@@ -293,32 +302,28 @@ async function generarCapacitacion(D: any): Promise<Buffer> {
         clausulaTitulo('DÉCIMA SÉPTIMA.-'),
         cuerpo([r(`Para la aplicación, interpretación y cumplimiento del presente Contrato las partes se someten expresamente a la Jurisdicción de los Tribunales Competentes en materia de Trabajo ubicados en ${D.patronCiudad}, renunciando desde ahora a cualquier fuero que pudiere corresponderle por razón de sus domicilios presentes o futuros.`)]),
 
-        // ── FIRMAS ──
-        new Paragraph({ children: [], spacing: { before: 80, after: 60 } }),
-        cuerpo([r(`LEÍDO QUE FUE POR LAS PARTES EL PRESENTE CONTRATO, LO SUSCRIBEN RECIBIENDO COPIA DEL MISMO EN ${D.patronCiudad.toUpperCase()}, A ${fechaDoc.toUpperCase()}.`, false)]),
-        new Paragraph({ children: [], spacing: { before: 120, after: 120 } }),
+        // ── CIERRE Y FIRMAS ──
+        new Paragraph({ children: [], spacing: { before: 100, after: 60 } }),
+        cuerpo([r(`LEÍDO QUE FUE POR LAS PARTES EL PRESENTE CONTRATO, LO SUSCRIBEN RECIBIENDO COPIA DEL MISMO EN ${ciudadUp}, A ${fechaDoc.toUpperCase()}.`)]),
+        new Paragraph({ children: [], spacing: { before: 160, after: 0 } }),
         firmaTable('EL PATRON', representante, 'EL TRABAJADOR', trabNombre),
 
         // ── ANEXO A ──
         new Paragraph({ children: [new PageBreak()], spacing: { before: 0, after: 0 } }),
-        titulo('ANEXO A.'),
+        p([r('ANEXO A.', true, 22)], { align: 'center', before: 0, after: 80 }),
         cuerpo([r('El presente anexo es complemento y parte integrante del Contrato Individual de Trabajo de Capacitación Inicial celebrada entre "LAS PARTES", establece las funciones y/o actividades, a realizar por "EL TRABAJADOR" en los términos que convinieron "LAS PARTES".')]),
         new Paragraph({ children: [], spacing: { before: 60, after: 40 } }),
         cuerpo([r(`${D.patronCiudad}, ${fechaDoc}.`)]),
         new Paragraph({ children: [], spacing: { before: 40, after: 40 } }),
         cuerpo([r('PUESTO: ', true), r(D.condPuesto, true)]),
         new Paragraph({ children: [], spacing: { before: 60, after: 60 } }),
-        tablaAnexoA(
-          ['N°', 'Descripción del Puesto'],
-          actividades.map((a: string, i: number) => [`${i + 1}.-`, a.trim()]),
-          [600, 8760]
-        ),
-        new Paragraph({ children: [], spacing: { before: 200, after: 120 } }),
+        tablaAnexoA(actividades),
+        new Paragraph({ children: [], spacing: { before: 200, after: 0 } }),
         firmaTable('EL PATRON', representante, 'EL TRABAJADOR', trabNombre),
 
         // ── ANEXO B ──
         new Paragraph({ children: [new PageBreak()], spacing: { before: 0, after: 0 } }),
-        titulo('ANEXO B'),
+        p([r('ANEXO B', true, 22)], { align: 'center', before: 0, after: 80 }),
         cuerpo([r('El presente anexo que es parte integrante del Contrato Individual de Trabajo de Capacitación Inicial celebrado entre "LAS PARTES", establece las prestaciones a que se refiere la cláusula octava del mismo.')]),
         new Paragraph({ children: [], spacing: { before: 60, after: 40 } }),
 
@@ -328,69 +333,38 @@ async function generarCapacitacion(D: any): Promise<Buffer> {
           r(`${D.condAguinaldo} días`, true),
           r(' de salario conforme a lo que establece el artículo 87 de la Ley Federal del Trabajo, que será pagado por "EL PATRON" antes del 20 de diciembre de cada año o su parte proporcional si el empleado no presta sus servicios el año completo.'),
         ]),
-
         cuerpo([r('DÍAS DE DESCANSO OBLIGATORIOS.- Serán días de descanso obligatorios los que señala el artículo 74 de la Ley Federal del Trabajo.', true)]),
-
         cuerpo([r('VACACIONES.- "EL TRABAJADOR" disfrutará de vacaciones de acuerdo a lo establecido en el artículo 76 de la Ley Federal del Trabajo (reforma 2023):', true)]),
-
-        tablaAnexoA(
-          ['AÑOS DE SERVICIOS', 'DIAS DE VACACIONES'],
-          [['1', '12 días'], ['2', '14 días'], ['3', '16 días'], ['4', '18 días']],
-          [4680, 4680]
-        ),
-
+        new Paragraph({ children: [], spacing: { before: 40, after: 40 } }),
+        tablaVacaciones(),
         new Paragraph({ children: [], spacing: { before: 80, after: 40 } }),
         cuerpo([r('A partir del quinto año de servicios el periodo de vacaciones se aumentará en dos días por cada 5 años de servicio adicionales.')]),
-
         cuerpo([
           r('PRIMA VACACIONAL: El trabajador percibirá durante su periodo vacacional una prima vacacional equivalente al '),
           r(`${D.condPrima}%`, true),
           r(' de los salarios correspondientes al periodo vacacional, de acuerdo con lo establecido por el artículo 80 de la Ley Federal del Trabajo.'),
         ]),
-
         cuerpo([r('"LAS PARTES" hacen constar que no existen más prestaciones que las antes mencionadas y las que la Ley Federal del Trabajo establece.')]),
         new Paragraph({ children: [], spacing: { before: 60, after: 40 } }),
         cuerpo([r(`${D.patronCiudad} a ${fechaDoc}.`)]),
-        new Paragraph({ children: [], spacing: { before: 120, after: 120 } }),
+        new Paragraph({ children: [], spacing: { before: 160, after: 0 } }),
         firmaTable('LA EMPRESA', representante, 'EL TRABAJADOR', trabNombre),
-
-        // ── ANEXO C — AVISO DE PRIVACIDAD ──
-        new Paragraph({ children: [new PageBreak()], spacing: { before: 0, after: 0 } }),
-        titulo('AVISO DE PRIVACIDAD'),
-        cuerpo([
-          r(D.patronNombre, true),
-          r(` ("LA EMPRESA"), con domicilio en ${D.patronDomicilio}, ${D.patronCiudad}, en cumplimiento a lo establecido en la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP) y su Reglamento, pone a disposición del titular el presente Aviso de Privacidad.`),
-        ]),
-        clausulaTitulo('FINALIDADES DEL TRATAMIENTO:'),
-        cuerpo([r('Los datos personales recabados serán utilizados para: (i) gestión de la relación laboral; (ii) cumplimiento de obligaciones fiscales y de seguridad social; (iii) pago de nómina y prestaciones; (iv) elaboración de expediente laboral.')]),
-        clausulaTitulo('DATOS RECABADOS:'),
-        cuerpo([r('Nombre completo, domicilio, RFC, CURP, número de seguridad social, fecha de nacimiento, datos bancarios y datos de familiares beneficiarios.')]),
-        clausulaTitulo('TRANSFERENCIAS:'),
-        cuerpo([r('Los datos podrán ser transferidos al IMSS, SAT, INFONAVIT, AFORE y demás autoridades competentes para el cumplimiento de obligaciones legales.')]),
-        clausulaTitulo('DERECHOS ARCO:'),
-        cuerpo([r(`El titular podrá ejercer sus derechos de Acceso, Rectificación, Cancelación u Oposición enviando solicitud a: ${D.patronCorreo || 'privacidad@empresa.com'} o en las oficinas de "LA EMPRESA".`)]),
-        new Paragraph({ children: [], spacing: { before: 160, after: 60 } }),
-        p([r('He leído y acepto el presente Aviso de Privacidad.')], { align: 'center' }),
-        new Paragraph({ children: [], spacing: { before: 120, after: 60 } }),
-        p([r('______________________________')], { align: 'center' }),
-        p([r('"EL TRABAJADOR"', true)], { align: 'center' }),
-        p([r(trabNombre, true)], { align: 'center' }),
 
         // ── ANEXO C — INSTRUCTIVO ──
         new Paragraph({ children: [new PageBreak()], spacing: { before: 0, after: 0 } }),
-        titulo('ANEXO C'),
-        subtitulo('INSTRUCTIVO PARA EL CORRECTO LLENADO DEL CONTRATO.'),
-        pBullet('patron-bullets', 'El contrato deberá ser firmado por el trabajador al calce en cada hoja.'),
-        pBullet('patron-bullets', 'El trabajador deberá de firmar cada uno de los anexos contenidos en el contrato.'),
-        pBullet('patron-bullets', 'Es necesario que el trabajador firme el aviso de privacidad contenido en este contrato.'),
-        pBullet('patron-bullets', 'Verificar que el salario pactado sea igual o superior al Salario Mínimo Vigente — www.gob.mx/conasami.'),
-        pBullet('patron-bullets', `Este contrato es de ${D.duracion} días naturales. No puede prorrogarse bajo la misma modalidad — Art. 39-C LFT.`),
-        pBullet('patron-bullets', 'Registrar al trabajador ante el IMSS el mismo día de inicio de la relación laboral — Art. 15 LSS.'),
-        pBullet('patron-bullets', 'Conservar el original firmado en el expediente laboral del trabajador.'),
+        p([r('ANEXO C', true, 22)], { align: 'center', before: 0, after: 40 }),
+        p([r('INSTRUCTIVO PARA EL CORRECTO LLENADO DEL CONTRATO.', true, 20)], { align: 'center', before: 0, after: 80 }),
+        pBullet('instructivo', 'El contrato deberá ser firmado por el trabajador al calce en cada hoja.'),
+        pBullet('instructivo', 'El trabajador deberá de firmar cada uno de los anexos contenidos en el contrato.'),
+        pBullet('instructivo', 'Es necesario que el trabajador firme el aviso de privacidad contenido en este contrato.'),
+        pBullet('instructivo', 'Verificar que el salario pactado sea igual o superior al Salario Mínimo Vigente — www.gob.mx/conasami.'),
+        pBullet('instructivo', `Este contrato es de ${D.duracion} días naturales. No puede prorrogarse bajo la misma modalidad — Art. 39-C LFT.`),
+        pBullet('instructivo', 'Registrar al trabajador ante el IMSS el mismo día de inicio de la relación laboral — Art. 15 LSS.'),
+        pBullet('instructivo', 'Conservar el original firmado en el expediente laboral del trabajador.'),
         new Paragraph({ children: [], spacing: { before: 200, after: 60 } }),
-        p([r('______________________________')], { align: 'center' }),
-        p([r('"EL TRABAJADOR"', true)], { align: 'center' }),
-        p([r(trabNombre, true)], { align: 'center' }),
+        new Paragraph({ children: [r('______________________________')], alignment: AlignmentType.CENTER, spacing: { before: 0, after: 40 } }),
+        new Paragraph({ children: [r('"EL TRABAJADOR"', true)], alignment: AlignmentType.CENTER, spacing: { before: 0, after: 20 } }),
+        new Paragraph({ children: [r(trabNombre, true)], alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 } }),
       ],
     }],
   });
@@ -405,17 +379,16 @@ async function generarObra(D: any): Promise<Buffer> {
   const trabNombre = D.trabNombre.toUpperCase();
   const representante = (D.patronRepresentante || D.patronNombre).toUpperCase();
   const fechaDoc = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+  const ciudadUp = D.patronCiudad.toUpperCase();
   const actividades = (D.condActividades || 'Actividades del puesto').split('\n').filter((a: string) => a.trim());
 
   const doc = new Document({
     numbering: {
-      config: [
-        {
-          reference: 'patron-bullets',
-          levels: [{ level: 0, format: LevelFormat.BULLET, text: '-', alignment: AlignmentType.LEFT,
-            style: { paragraph: { indent: { left: 360, hanging: 360 } } } }],
-        },
-      ],
+      config: [{
+        reference: 'bullets',
+        levels: [{ level: 0, format: LevelFormat.BULLET, text: '-', alignment: AlignmentType.LEFT,
+          style: { paragraph: { indent: { left: 360, hanging: 360 } } } }],
+      }],
     },
     styles: { default: { document: { run: { font: 'Arial', size: 20 } } } },
     sections: [{
@@ -426,31 +399,28 @@ async function generarObra(D: any): Promise<Buffer> {
         },
       },
       children: [
-        titulo('CONTRATO INDIVIDUAL DE TRABAJO'),
-        subtitulo('MODALIDAD POR OBRA DETERMINADA'),
-        p([r('Artículos 35 y 36 de la Ley Federal del Trabajo', false, 18)], { align: 'center', before: 0, after: 160 }),
+        p([r('CONTRATO INDIVIDUAL DE TRABAJO', true, 24)], { align: 'center', before: 0, after: 60 }),
+        p([r('MODALIDAD POR OBRA DETERMINADA', true, 22)], { align: 'center', before: 0, after: 40 }),
+        p([r('Artículos 35 y 36 de la Ley Federal del Trabajo', false, 18)], { align: 'center', before: 0, after: 140 }),
 
         cuerpo([
           r('CONTRATO INDIVIDUAL DE TRABAJO POR OBRA DETERMINADA QUE CELEBRAN POR UNA PARTE '),
           r(patronNombre, true),
-          r(' QUIEN ACTUA POR SU PROPIO DERECHO Y A QUIEN EN LO SUCESIVO SE DENOMINARÁ "EL PATRON" Y POR LA OTRA '),
+          r(' A QUIEN EN LO SUCESIVO SE DENOMINARÁ "EL PATRON" Y POR LA OTRA '),
           r(trabNombre, true),
           r(' EN LO SUCESIVO "EL TRABAJADOR", AL TENOR DE LAS SIGUIENTES:'),
         ]),
 
         seccion('D E C L A R A C I O N E S'),
         cuerpo([r('DECLARACIONES DE "EL PATRON":', true)]),
-
-        pBullet('patron-bullets', `Que es una persona ${D.patronTipo === 'fisica' ? 'física' : 'moral'} con capacidad legal para celebrar este contrato.`),
-        pBullet('patron-bullets', `Que se encuentra inscrito en el RFC ${D.patronRFC}, con domicilio en ${D.patronDomicilio}, ${D.patronCiudad}.`),
-        pBullet('patron-bullets', `Inscrito ante el IMSS con Registro Patronal número ${D.patronRegIMSS}.`),
-        pBullet('patron-bullets', `Que requiere contratar personal para la obra: ${D.obraNombre}, ubicada en ${D.obraDomicilio}, Registro IMSS de obra: ${D.obraRegIMSS}.`),
+        pBullet('bullets', `Que es una persona ${D.patronTipo === 'fisica' ? 'física' : 'moral'} con capacidad legal para celebrar este contrato.`),
+        pBullet('bullets', `RFC: ${D.patronRFC}, con domicilio en ${D.patronDomicilio}, ${D.patronCiudad}. Registro Patronal IMSS: ${D.patronRegIMSS}.`),
+        pBullet('bullets', `Requiere contratar personal para la obra: ${D.obraNombre}, ubicada en ${D.obraDomicilio}. Registro IMSS de obra: ${D.obraRegIMSS}.`),
 
         new Paragraph({ children: [], spacing: { before: 80, after: 40 } }),
         cuerpo([r('DECLARA "EL TRABAJADOR":', true)]),
-
-        pBullet('patron-bullets', `Ser una persona física del sexo ${D.trabSexo === 'FEMENINO' ? 'femenino' : 'masculino'}, RFC: ${D.trabRFC}, CURP: ${D.trabCURP}, NSS: ${D.trabNSS}, con domicilio en ${D.trabDomicilio}.`),
-        pBullet('patron-bullets', 'No tener impedimento alguno para celebrar el presente Contrato y contar con las capacidades y aptitudes requeridas para el desempeño del puesto contratado.'),
+        pBullet('bullets', `Ser una persona física del sexo ${D.trabSexo === 'FEMENINO' ? 'femenino' : 'masculino'}, RFC: ${D.trabRFC}, CURP: ${D.trabCURP}, NSS: ${D.trabNSS}, con domicilio en ${D.trabDomicilio}.`),
+        pBullet('bullets', 'No tener impedimento alguno para celebrar el presente Contrato y contar con las capacidades y aptitudes requeridas para el desempeño del puesto contratado.'),
 
         seccion('C L Á U S U L A S'),
 
@@ -460,16 +430,14 @@ async function generarObra(D: any): Promise<Buffer> {
           r(D.condPuesto, true),
           r(` en el Área de ${D.condArea}, en la obra denominada `),
           r(D.obraNombre, true),
-          r(', ubicada en '),
-          r(D.obraDomicilio, true),
-          r(`. Fecha estimada de término: ${D.obraTermino}. Las actividades específicas se detallan en el Anexo "A".`),
+          r(`, ubicada en ${D.obraDomicilio}. Fecha estimada de término: ${D.obraTermino}. Las actividades específicas se detallan en el Anexo "A".`),
         ]),
 
         clausulaTitulo('SEGUNDA.- DURACIÓN.-'),
         cuerpo([r('El presente contrato durará el tiempo necesario para concluir la obra antes señalada. Al terminarse la obra, la relación laboral concluye sin responsabilidad para ninguna de las partes — Arts. 35, 36, 53 fracc. III LFT.')]),
 
         clausulaTitulo('TERCERA.- JORNADA DE TRABAJO.-'),
-        cuerpo([r(`La jornada será de tipo ${D.jornadaTipo}, con horario de ${D.jornadaEntrada} a ${D.jornadaSalida} horas, con descanso los días ${D.jornadaDescanso} — Arts. 60, 61 y 69 LFT.`)]),
+        cuerpo([r(`Jornada ${D.jornadaTipo}, horario de ${D.jornadaEntrada} a ${D.jornadaSalida} horas, con descanso los días ${D.jornadaDescanso} — Arts. 60, 61 y 69 LFT.`)]),
 
         clausulaTitulo('CUARTA.- SALARIO Y FORMA DE PAGO.-'),
         cuerpo([
@@ -479,9 +447,7 @@ async function generarObra(D: any): Promise<Buffer> {
         ]),
 
         clausulaTitulo('QUINTA.- PRESTACIONES.-'),
-        cuerpo([
-          r(`Aguinaldo: ${D.condAguinaldo} días — Art. 87 LFT. Prima vacacional: ${D.condPrima}% — Art. 80 LFT. Vacaciones conforme reforma 2023 (12-14-16-18 días para años 1-2-3-4) — Art. 76 LFT.`),
-        ]),
+        cuerpo([r(`Aguinaldo: ${D.condAguinaldo} días — Art. 87 LFT. Prima vacacional: ${D.condPrima}% — Art. 80 LFT. Vacaciones conforme reforma 2023 (12-14-16-18 días para años 1-2-3-4) — Art. 76 LFT.`)]),
 
         clausulaTitulo('SEXTA.- CONFIDENCIALIDAD.-'),
         cuerpo([r('"EL TRABAJADOR" se obliga a no divulgar información confidencial de "EL PATRON". Esta obligación permanece vigente durante 5 (cinco) años posteriores a la terminación de la relación laboral — Art. 47 LFT.')]),
@@ -493,21 +459,17 @@ async function generarObra(D: any): Promise<Buffer> {
         cuerpo([r(`Las partes se someten a los Tribunales laborales competentes de ${D.patronCiudad} — Art. 700 LFT.`)]),
 
         new Paragraph({ children: [], spacing: { before: 120, after: 60 } }),
-        cuerpo([r(`LEÍDO QUE FUE POR LAS PARTES EL PRESENTE CONTRATO, LO SUSCRIBEN EN ${D.patronCiudad.toUpperCase()}, A ${fechaDoc.toUpperCase()}.`)]),
-        new Paragraph({ children: [], spacing: { before: 120, after: 120 } }),
+        cuerpo([r(`LEÍDO QUE FUE POR LAS PARTES EL PRESENTE CONTRATO, LO SUSCRIBEN EN ${ciudadUp}, A ${fechaDoc.toUpperCase()}.`)]),
+        new Paragraph({ children: [], spacing: { before: 160, after: 0 } }),
         firmaTable('EL PATRON', representante, 'EL TRABAJADOR', trabNombre),
 
         new Paragraph({ children: [new PageBreak()], spacing: { before: 0, after: 0 } }),
-        titulo('ANEXO A — DESCRIPCIÓN DEL PUESTO'),
+        p([r('ANEXO A.', true, 22)], { align: 'center', before: 0, after: 80 }),
         cuerpo([r(`Obra: `, true), r(D.obraNombre)]),
         cuerpo([r('Puesto: ', true), r(D.condPuesto), r('    Área: ', true), r(D.condArea)]),
         new Paragraph({ children: [], spacing: { before: 60, after: 60 } }),
-        tablaAnexoA(
-          ['N°', 'Actividades'],
-          actividades.map((a: string, i: number) => [`${i + 1}.-`, a.trim()]),
-          [600, 8760]
-        ),
-        new Paragraph({ children: [], spacing: { before: 200, after: 120 } }),
+        tablaAnexoA(actividades),
+        new Paragraph({ children: [], spacing: { before: 200, after: 0 } }),
         firmaTable('EL PATRON', representante, 'EL TRABAJADOR', trabNombre),
       ],
     }],
