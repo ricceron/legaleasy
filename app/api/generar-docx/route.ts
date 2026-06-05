@@ -63,6 +63,34 @@ function cuerpo(children: TextRun[]) {
   return p(children, { before: 40, after: 60, spacing: 276 });
 }
 
+// Texto de la cláusula de jornada según continuidad (Arts. 61, 63 y 64 LFT).
+function fmtHoras(h: number) {
+  return Number.isInteger(h) ? String(h) : h.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+}
+function textoJornada(D: any) {
+  const entrada = D.jornadaEntrada || '09:00';
+  const salida = D.jornadaSalida || '18:00';
+  const continua = D.jornadaContinua === 'continua';
+  const dur = Number(D.jornadaDuracionComida || 60);
+  const inicio = D.jornadaInicioComida || '14:00';
+  const [hI, mI] = inicio.split(':').map(Number);
+  const fin = (() => {
+    const t = hI * 60 + mI + dur;
+    return `${String(Math.floor(t / 60) % 24).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+  })();
+  const [hE, mE] = entrada.split(':').map(Number);
+  const [hS, mS] = salida.split(':').map(Number);
+  let span = hS * 60 + mS - (hE * 60 + mE);
+  if (span <= 0) span += 1440;
+  const efectivas = continua ? span / 60 : span / 60 - dur / 60;
+  const durTxt = dur === 60 ? 'una hora' : dur === 30 ? 'media hora' : dur === 90 ? 'una hora y media' : dur === 120 ? 'dos horas' : `${dur} minutos`;
+
+  if (continua) {
+    return `La duración de la jornada de trabajo será la ${D.jornadaTipo}, con un horario de ${entrada} a ${salida} horas. Dentro de dicha jornada continua "EL TRABAJADOR" gozará de un descanso de ${durTxt} para tomar sus alimentos, de conformidad con el artículo 63 de la Ley Federal del Trabajo. Al permanecer "EL TRABAJADOR" dentro del centro de trabajo durante dicho periodo, el mismo se computa como tiempo efectivo de la jornada en términos del artículo 64 de la propia Ley, resultando una jornada efectiva de ${fmtHoras(efectivas)} horas diarias. "EL PATRON" podrá en todo momento ajustar los días laborables y redistribuir el horario conforme a sus necesidades operativas y a los requerimientos del objeto del contrato, sin que dichos ajustes impliquen una modificación sustancial de las condiciones de trabajo, con descanso semanal los días ${D.jornadaDescanso}.`;
+  }
+  return `La duración de la jornada de trabajo será la ${D.jornadaTipo}, con un horario de ${entrada} a ${salida} horas, comprendiendo dentro de ese periodo un lapso de ${durTxt}, de las ${inicio} a las ${fin} horas, destinado a que "EL TRABAJADOR" tome sus alimentos fuera del centro de trabajo, durante el cual podrá disponer libremente de su tiempo, por lo que dicho lapso no se computa como tiempo efectivo de la jornada laboral conforme a la interpretación a contrario sensu del artículo 64 de la Ley Federal del Trabajo, quedando la jornada efectiva de trabajo en ${fmtHoras(efectivas)} horas diarias, dentro del máximo previsto por el artículo 61 de la propia Ley. En caso de que "EL TRABAJADOR" no pudiera salir del centro de trabajo durante dicho lapso, el tiempo correspondiente se computará como tiempo efectivo de trabajo en términos del citado artículo 64. "EL PATRON" podrá en todo momento ajustar los días laborables y redistribuir el horario conforme a sus necesidades operativas y a los requerimientos del objeto del contrato, sin que dichos ajustes impliquen una modificación sustancial de las condiciones de trabajo, con descanso semanal los días ${D.jornadaDescanso}.`;
+}
+
 function linea() {
   return new Paragraph({
     children: [r('________________________________')],
@@ -254,7 +282,7 @@ async function generarCapacitacion(D: any): Promise<Buffer> {
 
         clausulaTitulo('QUINTA.-'),
         cuerpo([
-          r(`La duración de la jornada de trabajo será la ${D.jornadaTipo}, con un horario de ${D.jornadaEntrada} a ${D.jornadaSalida} horas, comprendiendo dentro de ese periodo una hora destinada a que "EL TRABAJADOR" tome sus alimentos fuera del centro de trabajo, la cual no se computará como tiempo de la jornada laboral conforme al artículo 63 de la Ley Federal del Trabajo, quedando la jornada efectiva de trabajo en ${D.jornadaTipo === 'diurna' ? '8' : D.jornadaTipo === 'nocturna' ? '7' : '7.5'} horas diarias. "EL PATRON" podrá en todo momento ajustar los días laborables y redistribuir el horario conforme a sus necesidades operativas y a los requerimientos del objeto del contrato, sin que dichos ajustes impliquen una modificación sustancial de las condiciones de trabajo, con descanso semanal los días ${D.jornadaDescanso}.`),
+          r(textoJornada(D)),
         ]),
 
         clausulaTitulo('SEXTA.-'),
@@ -437,7 +465,7 @@ async function generarObra(D: any): Promise<Buffer> {
         cuerpo([r('El presente contrato durará el tiempo necesario para concluir la obra antes señalada. Al terminarse la obra, la relación laboral concluye sin responsabilidad para ninguna de las partes — Arts. 35, 36, 53 fracc. III LFT.')]),
 
         clausulaTitulo('TERCERA.- JORNADA DE TRABAJO.-'),
-        cuerpo([r(`Jornada ${D.jornadaTipo}, horario de ${D.jornadaEntrada} a ${D.jornadaSalida} horas, con descanso los días ${D.jornadaDescanso} — Arts. 60, 61 y 69 LFT.`)]),
+        cuerpo([r(textoJornada(D))]),
 
         clausulaTitulo('CUARTA.- SALARIO Y FORMA DE PAGO.-'),
         cuerpo([
