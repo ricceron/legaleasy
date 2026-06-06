@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'LegalEasy — Sistema Legal Laboral Inteligente',
+  title: 'LexByte — Sistema Legal Laboral Inteligente',
   description: 'Genera contratos laborales con IA jurídica especializada',
 }
 
