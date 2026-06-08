@@ -90,7 +90,7 @@ export function generarRenuncia(D: any): Promise<Buffer> {
       campo(tipoJ, 'diurna / nocturna / mixta'),
       ra(', con un horario de '), campo(entrada, 'hora de entrada'), ra(' a '), campo(salida, 'hora de salida'),
       ra(', con '), campo(String(comidaMin), '60'),
-      ra(' minutos diarios destinados a tomar alimentos fuera del lugar de trabajo y fuera de la subordinación de la empresa, tiempo que no se computa dentro de la jornada laboral conforme al artículo 63 de la Ley Federal del Trabajo, resultando una jornada efectiva de '),
+      ra(' minutos diarios destinados a tomar alimentos fuera del lugar de trabajo y fuera de la subordinación de la empresa, tiempo que no se computa dentro de la jornada laboral conforme al artículo 64 de la Ley Federal del Trabajo, resultando una jornada efectiva de '),
       campo(efectivas, '8'),
       ra(' horas diarias, sin que en ningún momento se me haya requerido laborar tiempo extraordinario sin la debida compensación.'),
     ]),
