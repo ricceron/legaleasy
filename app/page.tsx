@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { V, F, SB, type Msg, type Section, type DocTipo } from './shared';
 import { FormContrato } from './FormContrato';
 import { FormAviso } from './FormAviso';
+import { FormRenuncia } from './FormRenuncia';
 
 export default function LexByte() {
   const [section, setSection] = useState<Section>('lex');
@@ -49,7 +50,7 @@ export default function LexByte() {
     {id:'aviso',nombre:'Aviso de Privacidad',base:'LFPDPPP',ready:true,icon:'ti-shield-lock'},
     {id:'ind',nombre:'Tiempo Indeterminado',base:'Art. 35 LFT',ready:false,icon:'ti-file-text'},
     {id:'acta',nombre:'Acta Administrativa',base:'Art. 47 LFT',ready:false,icon:'ti-scale'},
-    {id:'ren',nombre:'Renuncia Voluntaria',base:'Art. 53 LFT',ready:false,icon:'ti-signature'},
+    {id:'renuncia',nombre:'Renuncia Voluntaria',base:'Art. 53 LFT',ready:true,icon:'ti-signature'},
     {id:'fin',nombre:'Finiquito y Liquidación',base:'Arts. 48-50 LFT',ready:false,icon:'ti-cash'},
   ];
   const navItems=[{id:'lex',icon:'ti-scale',label:'Asistente Lex'},{id:'docs',icon:'ti-files',label:'Documentos'},{id:'historial',icon:'ti-folder',label:'Historial'},{id:'config',icon:'ti-settings',label:'Configuración'}];
@@ -103,7 +104,7 @@ export default function LexByte() {
             <div>
               <div style={{fontWeight:700,fontSize:14,color:'#fff'}}>
                 {section==='lex'&&'Asistente Jurídico Lex'}
-                {section==='docs'&&(docTipo?(docTipo==='aviso'?'Aviso de Privacidad':`Contrato — ${docTipo==='capacitacion'?'Capacitación Inicial':'Obra Determinada'}`):'Generador de Documentos')}
+                {section==='docs'&&(docTipo?(docTipo==='aviso'?'Aviso de Privacidad':docTipo==='renuncia'?'Carta de Renuncia Voluntaria':`Contrato — ${docTipo==='capacitacion'?'Capacitación Inicial':'Obra Determinada'}`):'Generador de Documentos')}
                 {section==='historial'&&'Historial de Documentos'}
                 {section==='config'&&'Configuración'}
               </div>
@@ -166,7 +167,8 @@ export default function LexByte() {
           )}
 
           {section==='docs'&&docTipo==='aviso'&&<FormAviso key="aviso"/>}
-          {section==='docs'&&docTipo&&docTipo!=='aviso'&&<FormContrato key={docTipo} tipo={docTipo}/>}
+          {section==='docs'&&docTipo==='renuncia'&&<FormRenuncia key="renuncia"/>}
+          {section==='docs'&&(docTipo==='capacitacion'||docTipo==='obra')&&<FormContrato key={docTipo} tipo={docTipo}/>}
 
           {section==='historial'&&<div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:12}}><i className="ti ti-folder-open" style={{fontSize:44,color:'rgba(57,255,20,0.2)'}} aria-hidden="true"/><div style={{fontWeight:600,fontSize:14,color:'rgba(255,255,255,0.4)'}}>Sin documentos aún</div><div style={{fontSize:12,color:'rgba(255,255,255,0.25)'}}>Los contratos generados aparecerán aquí</div></div>}
 
