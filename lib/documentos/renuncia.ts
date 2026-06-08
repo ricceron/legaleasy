@@ -11,9 +11,9 @@ export function generarRenuncia(D: any): Promise<Buffer> {
     val ? new TextRun({ text: val, font: 'Arial', size: 22, bold: true, color: '000000' })
         : new TextRun({ text: `«${ph}»`, font: 'Arial', size: 22, bold: true, color: BLUE });
   const pa = (children: TextRun[], opts: any = {}) =>
-    new Paragraph({ children, alignment: (opts.align || 'both') as any, spacing: { before: opts.before ?? 120, after: opts.after ?? 120, line: 300 } });
+    new Paragraph({ children, alignment: (opts.align || 'both') as any, spacing: { before: opts.before ?? 0, after: opts.after ?? 132, line: 260 } });
   const center = (children: TextRun[], opts: any = {}) =>
-    new Paragraph({ children, alignment: AlignmentType.CENTER, spacing: { before: opts.before ?? 40, after: opts.after ?? 40 } });
+    new Paragraph({ children, alignment: AlignmentType.CENTER, spacing: { before: opts.before ?? 30, after: opts.after ?? 30 } });
 
   const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
   const razon = D.patronNombre || '';
@@ -23,17 +23,14 @@ export function generarRenuncia(D: any): Promise<Buffer> {
   const ciudad = D.ciudad || '';
   const hora = D.hora || '';
 
-  // Fecha de la renuncia (también fecha de la carta)
   const fr = D.fechaRenuncia ? new Date(D.fechaRenuncia + 'T00:00:00') : null;
   const dd = fr ? String(fr.getDate()).padStart(2, '0') : '';
   const mesNom = fr ? meses[fr.getMonth()] : '';
   const anio = fr ? String(fr.getFullYear()) : '';
 
-  // Fecha de ingreso (formato DD/MM/AAAA)
   const fi = D.fechaIngreso ? new Date(D.fechaIngreso + 'T00:00:00') : null;
   const ingresoTxt = fi ? `${String(fi.getDate()).padStart(2, '0')}/${String(fi.getMonth() + 1).padStart(2, '0')}/${fi.getFullYear()}` : '';
 
-  // Antigüedad en años y meses
   let antig = '';
   if (fi && fr) {
     let m = (fr.getFullYear() - fi.getFullYear()) * 12 + (fr.getMonth() - fi.getMonth());
@@ -45,29 +42,14 @@ export function generarRenuncia(D: any): Promise<Buffer> {
     antig = y && mm ? `${ys} y ${ms}` : y ? ys : ms;
   }
 
-  // Jornada efectiva (discontinua: la comida no se computa)
-  const tipoJ = D.jornadaTipo || 'diurna';
-  const entrada = D.jornadaEntrada || '';
-  const salida = D.jornadaSalida || '';
-  const comidaMin = Number(D.jornadaDuracionComida || 60);
-  let efectivas = '';
-  if (entrada && salida) {
-    const [hE, mE] = entrada.split(':').map(Number);
-    const [hS, mS] = salida.split(':').map(Number);
-    let span = hS * 60 + mS - (hE * 60 + mE);
-    if (span <= 0) span += 1440;
-    const h = span / 60 - comidaMin / 60;
-    efectivas = Number.isInteger(h) ? String(h) : h.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
-  }
-
   const children: any[] = [
-    center([ra('CARTA DE RENUNCIA VOLUNTARIA', true)], { after: 30 }),
-    center([ra('Artículo 53, Fracción I de la Ley Federal del Trabajo', false, true)], { after: 220 }),
+    center([ra('CARTA DE RENUNCIA VOLUNTARIA', true)], { after: 20 }),
+    center([ra('Artículo 53, Fracción I de la Ley Federal del Trabajo', false, true)], { after: 190 }),
 
-    new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { after: 180 }, children: [campo(ciudad, 'Ciudad'), ra(', a '), campo(dd, 'DD'), ra(' de '), campo(mesNom, 'mes'), ra(' de '), campo(anio, 'AAAA')] }),
+    new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { after: 170 }, children: [campo(ciudad, 'Ciudad'), ra(', a '), campo(dd, 'DD'), ra(' de '), campo(mesNom, 'mes'), ra(' de '), campo(anio, 'AAAA')] }),
 
-    new Paragraph({ spacing: { after: 20 }, children: [campo(razon, 'NOMBRE O RAZÓN SOCIAL DEL PATRÓN')] }),
-    new Paragraph({ spacing: { after: 160 }, children: [ra('P r e s e n t e', true)] }),
+    new Paragraph({ spacing: { after: 0, line: 264 }, children: [campo(razon, 'NOMBRE O RAZÓN SOCIAL DEL PATRÓN')] }),
+    new Paragraph({ spacing: { after: 150, line: 260 }, children: [ra('P r e s e n t e', true)] }),
 
     pa([
       ra('Por medio de la presente, yo '), campo(titular, 'NOMBRE COMPLETO DEL TRABAJADOR'),
@@ -86,13 +68,7 @@ export function generarRenuncia(D: any): Promise<Buffer> {
     ]),
 
     pa([
-      ra('Hago constar que durante el tiempo que presté mis servicios, los desempeñé en jornada '),
-      campo(tipoJ, 'diurna / nocturna / mixta'),
-      ra(', con un horario de '), campo(entrada, 'hora de entrada'), ra(' a '), campo(salida, 'hora de salida'),
-      ra(', con '), campo(String(comidaMin), '60'),
-      ra(' minutos diarios destinados a tomar alimentos fuera del lugar de trabajo y fuera de la subordinación de la empresa, tiempo que no se computa dentro de la jornada laboral conforme al artículo 64 de la Ley Federal del Trabajo, resultando una jornada efectiva de '),
-      campo(efectivas, '8'),
-      ra(' horas diarias, sin que en ningún momento se me haya requerido laborar tiempo extraordinario sin la debida compensación.'),
+      ra('Hago constar que durante el tiempo que presté mis servicios se cumplió en todo momento con la jornada y el horario de trabajo en los términos establecidos por la Ley Federal del Trabajo, sin que en ningún momento se me haya requerido laborar tiempo extraordinario sin la debida compensación.'),
     ]),
 
     pa([
@@ -118,18 +94,18 @@ export function generarRenuncia(D: any): Promise<Buffer> {
       ra(', a '), campo(dd, 'DD'), ra(' de '), campo(mesNom, 'mes'), ra(' de '), campo(anio, 'AAAA'),
       ra(', siendo las '), campo(hora, 'HH:MM'),
       ra(' horas, en pleno uso de mis facultades y sin presión ni coacción de ninguna especie.'),
-    ]),
+    ], { after: 60 }),
 
-    new Paragraph({ spacing: { before: 200, after: 60 }, children: [ra('Atentamente,')] }),
-    center([ra('________________________________________')], { before: 320, after: 20 }),
+    new Paragraph({ spacing: { before: 90, after: 0, line: 260 }, children: [ra('Atentamente,')] }),
+    center([ra('________________________________________')], { before: 300, after: 10 }),
     center([campo(titular, 'NOMBRE COMPLETO DEL TRABAJADOR')]),
-    center([ra('Firma del trabajador', false, true)]),
+    center([ra('Firma del trabajador', false, true)], { after: 0 }),
   ];
 
   const doc = new Document({
     styles: { default: { document: { run: { font: 'Arial', size: 22 } } } },
     sections: [{
-      properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
+      properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1418, right: 1418, bottom: 1418, left: 1418 } } },
       children,
     }],
   });
