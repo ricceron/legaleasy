@@ -2,31 +2,82 @@
 import { useState, useRef, useEffect } from 'react';
 import { V, F } from './shared';
 
+// Esquemas de equipo: al elegir el tipo, cambian los campos que se piden.
+const SCHEMAS: any = {
+  computo: { titulo: 'EQUIPO DE CÓMPUTO:', label: 'Equipo de cómputo', campos: [
+    { k: 'subtipo', label: 'Tipo de equipo', ph: 'LAPTOP / DESKTOP / TABLET' },
+    { k: 'marca', label: 'Marca', ph: 'MARCA' },
+    { k: 'modelo', label: 'Modelo', ph: 'MODELO' },
+    { k: 'serie', label: 'Número de serie', ph: 'NÚMERO DE SERIE' },
+    { k: 'so', label: 'Sistema operativo', ph: 'SISTEMA OPERATIVO Y VERSIÓN' },
+    { k: 'accesorios', label: 'Accesorios incluidos', ph: 'CARGADOR / MOUSE / MOCHILA / OTROS' },
+  ]},
+  telefono: { titulo: 'EQUIPO TELEFÓNICO:', label: 'Equipo telefónico', campos: [
+    { k: 'marca', label: 'Marca', ph: 'MARCA' },
+    { k: 'modelo', label: 'Modelo', ph: 'MODELO' },
+    { k: 'serie', label: 'Número de serie / IMEI', ph: 'NÚMERO DE SERIE / IMEI' },
+    { k: 'numero', label: 'Número asignado', ph: "NÚMERO TELEFÓNICO CORPORATIVO O 'NO APLICA'" },
+    { k: 'accesorios', label: 'Accesorios incluidos', ph: 'CARGADOR / FUNDA / OTROS' },
+  ]},
+  tablet: { titulo: 'TABLET:', label: 'Tablet', campos: [
+    { k: 'marca', label: 'Marca', ph: 'MARCA' },
+    { k: 'modelo', label: 'Modelo', ph: 'MODELO' },
+    { k: 'serie', label: 'Número de serie', ph: 'NÚMERO DE SERIE' },
+    { k: 'so', label: 'Sistema operativo', ph: 'SISTEMA OPERATIVO' },
+    { k: 'accesorios', label: 'Accesorios incluidos', ph: 'CARGADOR / FUNDA / OTROS' },
+  ]},
+  monitor: { titulo: 'MONITOR / PANTALLA:', label: 'Monitor / Pantalla', campos: [
+    { k: 'marca', label: 'Marca', ph: 'MARCA' },
+    { k: 'modelo', label: 'Modelo', ph: 'MODELO' },
+    { k: 'serie', label: 'Número de serie', ph: 'NÚMERO DE SERIE' },
+    { k: 'tam', label: 'Tamaño', ph: '24" / 27"' },
+    { k: 'accesorios', label: 'Accesorios incluidos', ph: 'CABLES / BASE / OTROS' },
+  ]},
+  otro: { titulo: 'OTRO EQUIPO O HERRAMIENTA:', label: 'Otro equipo o herramienta', campos: [
+    { k: 'descripcion', label: 'Descripción del bien', ph: 'DESCRIPCIÓN DEL BIEN' },
+    { k: 'marca', label: 'Marca', ph: 'MARCA' },
+    { k: 'modelo', label: 'Modelo', ph: 'MODELO' },
+    { k: 'serie', label: 'Número de serie', ph: "NÚMERO DE SERIE O 'NO APLICA'" },
+    { k: 'accesorios', label: 'Accesorios incluidos', ph: "ACCESORIOS O 'NINGUNO'" },
+  ]},
+};
+const TIPOS: [string, string][] = [['computo','Equipo de cómputo'],['telefono','Equipo telefónico'],['tablet','Tablet'],['monitor','Monitor / Pantalla'],['otro','Otro equipo o herramienta']];
+
 export function FormResponsivaEquipo() {
   const [generando, setGenerando] = useState(false);
   const [analisis, setAnalisis] = useState<any>(null);
   const [analizando, setAnalizando] = useState(false);
+  const [equipos, setEquipos] = useState<any[]>([
+    { id: 'it_1', tipo: 'computo', campos: { subtipo: 'Laptop', marca: 'Dell', modelo: 'Latitude 5440', serie: 'SN-DL5440-00123', so: 'Windows 11 Pro', accesorios: 'Cargador y mochila' } },
+    { id: 'it_2', tipo: 'telefono', campos: { marca: 'Samsung', modelo: 'Galaxy A55', serie: 'IMEI 359...12', numero: '81-0000-0000', accesorios: 'Cargador y funda' } },
+  ]);
+  const idRef = useRef(3);
 
-  const K = ['razonSocial','titular','puesto','ciudad','fecha','representante','cargoRepresentante','compTipo','compMarca','compModelo','compSerie','compSO','compAccesorios','telMarca','telModelo','telSerie','telNumero','telAccesorios','otro1','otro2'];
+  const C = ['razonSocial','titular','puesto','ciudad','fecha','representante','cargoRepresentante'];
   const r2: any = {};
-  K.forEach(k => { r2[k] = useRef<HTMLInputElement>(null); });
+  C.forEach(k => { r2[k] = useRef<HTMLInputElement>(null); });
 
   useEffect(() => {
     setTimeout(() => {
-      const d: any = {
-        razonSocial:'COMERCIALIZADORA NORTE S.A. DE C.V.', titular:'MARÍA FERNANDA LÓPEZ REYES', puesto:'Ejecutivo de Ventas',
-        ciudad:'Monterrey, Nuevo León', fecha:new Date().toISOString().slice(0,10), representante:'Lic. Roberto García Martínez', cargoRepresentante:'Gerente de Recursos Humanos',
-        compTipo:'Laptop', compMarca:'Dell', compModelo:'Latitude 5440', compSerie:'SN-DL5440-00123', compSO:'Windows 11 Pro', compAccesorios:'Cargador y mochila',
-        telMarca:'Samsung', telModelo:'Galaxy A55', telSerie:'IMEI 359...12', telNumero:'81-0000-0000', telAccesorios:'Cargador y funda',
-        otro1:'Ninguno', otro2:'Ninguno',
-      };
+      const d: any = { razonSocial:'COMERCIALIZADORA NORTE S.A. DE C.V.', titular:'MARÍA FERNANDA LÓPEZ REYES', puesto:'Ejecutivo de Ventas', ciudad:'Monterrey, Nuevo León', fecha:new Date().toISOString().slice(0,10), representante:'Lic. Roberto García Martínez', cargoRepresentante:'Gerente de Recursos Humanos' };
       Object.entries(d).forEach(([k,val]) => { if (r2[k]?.current) r2[k].current.value = val as string; });
     }, 120);
   }, []);
 
+  const addEquipo = () => setEquipos(e => [...e, { id: 'it_' + (idRef.current++), tipo: 'computo', campos: {} }]);
+  const removeEquipo = (id: string) => setEquipos(e => e.filter(x => x.id !== id));
+  const setTipo = (id: string, tipo: string) => setEquipos(e => e.map(x => x.id === id ? { ...x, tipo, campos: {} } : x));
+  const setCampo = (id: string, k: string, val: string) => setEquipos(e => e.map(x => x.id === id ? { ...x, campos: { ...x.campos, [k]: val } } : x));
+
   const getDatos = () => {
-    const o: any = {}; K.forEach(k => { o[k] = r2[k].current?.value || ''; });
-    return { patronNombre:o.razonSocial, trabNombre:o.titular, ...o };
+    const o: any = {}; C.forEach(k => { o[k] = r2[k].current?.value || ''; });
+    return {
+      patronNombre: o.razonSocial, trabNombre: o.titular, ...o,
+      equipos: equipos.map(it => {
+        const s = SCHEMAS[it.tipo];
+        return { titulo: s.titulo, tipo: s.label, filas: s.campos.map((c: any) => [c.label + ':', it.campos[c.k] || '', c.ph]) };
+      }),
+    };
   };
 
   const analizar = async () => {
@@ -53,35 +104,54 @@ export function FormResponsivaEquipo() {
 
   const inpSt:any={width:'100%',padding:'9px 12px',background:'rgba(255,255,255,0.05)',border:'0.5px solid rgba(57,255,20,0.2)',borderRadius:8,color:'#fff',fontSize:13,fontFamily:"'Sora',sans-serif",outline:'none'};
   const labSt:any={fontSize:10,color:'rgba(255,255,255,0.4)',fontWeight:600,textTransform:'uppercase' as const,letterSpacing:'0.4px',marginBottom:5,display:'block'};
-  const fldSt:any={marginBottom:14};
-  const rowSt:any={display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:14};
+  const fldSt:any={marginBottom:12};
+  const rowSt:any={display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12};
   const secSt:any={margin:'18px 0 12px',fontSize:11,fontWeight:600,color:V,textTransform:'uppercase' as const,letterSpacing:'0.5px'};
-  const Fld=({k,label,ph}:{k:string;label:string;ph:string})=>(<div style={fldSt}><label style={labSt}>{label}</label><input ref={r2[k]} placeholder={ph} style={inpSt}/></div>);
 
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
       <div style={{flex:1,overflowY:'auto',padding:22}}>
         <div style={{marginBottom:12,padding:'8px 12px',background:'rgba(57,255,20,0.05)',border:'0.5px solid rgba(57,255,20,0.15)',borderRadius:8,fontSize:11,color:'rgba(255,255,255,0.4)'}}>🧪 Datos de prueba cargados — responsiva de equipo (Arts. 134-VI y 135-IX LFT)</div>
+
         <div style={secSt}>Partes y fecha</div>
-        <Fld k="razonSocial" label="Razón social del patrón *" ph="Empresa XYZ S.A. de C.V."/>
-        <Fld k="titular" label="Nombre del trabajador *" ph="Nombre completo del trabajador/a"/>
-        <div style={rowSt}><Fld k="puesto" label="Puesto" ph="Ejecutivo de Ventas"/><div style={fldSt}><label style={labSt}>Ciudad</label><input ref={r2.ciudad} placeholder="Monterrey, Nuevo León" style={inpSt}/></div></div>
-        <div style={rowSt}><div style={fldSt}><label style={labSt}>Fecha</label><input ref={r2.fecha} type="date" style={inpSt}/></div><Fld k="cargoRepresentante" label="Cargo del representante" ph="Gerente de RH"/></div>
-        <Fld k="representante" label="Nombre del representante del patrón" ph="Lic. Nombre Apellido"/>
+        <div style={fldSt}><label style={labSt}>Razón social del patrón *</label><input ref={r2.razonSocial} placeholder="Empresa XYZ S.A. de C.V." style={inpSt}/></div>
+        <div style={fldSt}><label style={labSt}>Nombre del trabajador *</label><input ref={r2.titular} placeholder="Nombre completo del trabajador/a" style={inpSt}/></div>
+        <div style={rowSt}>
+          <div style={fldSt}><label style={labSt}>Puesto</label><input ref={r2.puesto} placeholder="Ejecutivo de Ventas" style={inpSt}/></div>
+          <div style={fldSt}><label style={labSt}>Ciudad</label><input ref={r2.ciudad} placeholder="Monterrey, Nuevo León" style={inpSt}/></div>
+        </div>
+        <div style={rowSt}>
+          <div style={fldSt}><label style={labSt}>Fecha</label><input ref={r2.fecha} type="date" style={inpSt}/></div>
+          <div style={fldSt}><label style={labSt}>Cargo del representante</label><input ref={r2.cargoRepresentante} placeholder="Gerente de RH" style={inpSt}/></div>
+        </div>
+        <div style={fldSt}><label style={labSt}>Nombre del representante del patrón</label><input ref={r2.representante} placeholder="Lic. Nombre Apellido" style={inpSt}/></div>
 
-        <div style={secSt}>Equipo de cómputo</div>
-        <div style={rowSt}><Fld k="compTipo" label="Tipo" ph="Laptop / Desktop / Tablet"/><Fld k="compMarca" label="Marca" ph="Dell"/></div>
-        <div style={rowSt}><Fld k="compModelo" label="Modelo" ph="Latitude 5440"/><Fld k="compSerie" label="Número de serie" ph="SN-..."/></div>
-        <div style={rowSt}><Fld k="compSO" label="Sistema operativo" ph="Windows 11 Pro"/><Fld k="compAccesorios" label="Accesorios" ph="Cargador, mouse, mochila"/></div>
+        <div style={{...secSt,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <span>Equipo asignado ({equipos.length})</span>
+          <button onClick={addEquipo} style={{background:'rgba(57,255,20,0.1)',color:V,border:'0.5px solid rgba(57,255,20,0.3)',borderRadius:7,padding:'5px 12px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:"'Sora',sans-serif",textTransform:'none'}}>+ Agregar equipo</button>
+        </div>
 
-        <div style={secSt}>Equipo telefónico</div>
-        <div style={rowSt}><Fld k="telMarca" label="Marca" ph="Samsung"/><Fld k="telModelo" label="Modelo" ph="Galaxy A55"/></div>
-        <div style={rowSt}><Fld k="telSerie" label="Serie / IMEI" ph="IMEI ..."/><Fld k="telNumero" label="Número asignado" ph="81-... o 'No aplica'"/></div>
-        <Fld k="telAccesorios" label="Accesorios" ph="Cargador, funda"/>
-
-        <div style={secSt}>Otros equipos o herramientas</div>
-        <Fld k="otro1" label="Descripción 1" ph="Descripción, marca, serie — o 'Ninguno'"/>
-        <Fld k="otro2" label="Descripción 2" ph="Descripción, marca, serie — o 'Ninguno'"/>
+        {equipos.map((it) => (
+          <div key={it.id} style={{border:'0.5px solid rgba(57,255,20,0.18)',borderRadius:10,padding:14,marginBottom:12,background:'rgba(255,255,255,0.02)'}}>
+            <div style={{display:'flex',gap:10,alignItems:'flex-end',marginBottom:10}}>
+              <div style={{flex:1}}>
+                <label style={labSt}>Tipo de equipo</label>
+                <select value={it.tipo} onChange={e=>setTipo(it.id, e.target.value)} style={inpSt}>
+                  {TIPOS.map(([v,l])=><option key={v} value={v}>{l}</option>)}
+                </select>
+              </div>
+              {equipos.length>1 && (
+                <button onClick={()=>removeEquipo(it.id)} style={{background:'rgba(239,68,68,0.1)',color:'#fca5a5',border:'0.5px solid rgba(239,68,68,0.3)',borderRadius:7,padding:'9px 12px',fontSize:12,cursor:'pointer',fontFamily:"'Sora',sans-serif",flexShrink:0}}>Quitar</button>
+              )}
+            </div>
+            {SCHEMAS[it.tipo].campos.map((c:any)=>(
+              <div key={c.k} style={fldSt}>
+                <label style={labSt}>{c.label}</label>
+                <input value={it.campos[c.k]||''} onChange={e=>setCampo(it.id, c.k, e.target.value)} placeholder={c.ph} style={inpSt}/>
+              </div>
+            ))}
+          </div>
+        ))}
 
         {analisis && !analizando && (
           <div style={{marginTop:20}}>

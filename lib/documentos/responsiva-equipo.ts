@@ -1,4 +1,5 @@
 // Carta Responsiva de Asignación de Equipo de Trabajo (Arts. 134-VI y 135-IX LFT).
+// Recibe una lista dinámica de equipos: D.equipos = [{ titulo, filas: [[label, valor, placeholder], ...] }, ...]
 import {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, AlignmentType, BorderStyle, WidthType,
 } from 'docx';
@@ -46,6 +47,19 @@ export function generarResponsivaEquipo(D: any): Promise<Buffer> {
     ],
   });
 
+  // Bloques de equipo dinámicos
+  const equipos: any[] = Array.isArray(D.equipos) ? D.equipos : [];
+  const bloquesEquipo: any[] = [];
+  if (equipos.length === 0) {
+    bloquesEquipo.push(sub('EQUIPO ASIGNADO:'), kv([['Descripción:', campo('', 'DESCRIPCIÓN DEL BIEN, MARCA, MODELO, SERIE')]]));
+  } else {
+    equipos.forEach((it: any) => {
+      bloquesEquipo.push(sub(it.titulo || 'EQUIPO ASIGNADO:'));
+      const filas: Array<[string, TextRun]> = (it.filas || []).map((fila: any[]) => [String(fila[0] ?? ''), campo(fila[1] || '', String(fila[2] ?? fila[0] ?? ''))]);
+      bloquesEquipo.push(kv(filas.length ? filas : [['Descripción:', campo('', 'DESCRIPCIÓN')]]));
+    });
+  }
+
   const children: any[] = [
     center([ra('CARTA RESPONSIVA DE ASIGNACIÓN DE EQUIPO DE TRABAJO', true)], { after: 14 }),
     center([ra('Artículos 134 Fracción VI y 135 Fracción IX de la Ley Federal del Trabajo', false, true)], { after: 180 }),
@@ -59,34 +73,13 @@ export function generarResponsivaEquipo(D: any): Promise<Buffer> {
       ra(', declaro haber recibido de conformidad el equipo que a continuación se describe, el cual me es asignado para resguardo y para la ejecución y desempeño de mis funciones laborales:'),
     ]),
 
-    sub('EQUIPO DE CÓMPUTO:'),
-    kv([
-      ['Tipo de equipo:', campo(D.compTipo, 'LAPTOP / DESKTOP / TABLET')],
-      ['Marca:', campo(D.compMarca, 'MARCA')],
-      ['Modelo:', campo(D.compModelo, 'MODELO')],
-      ['Número de serie:', campo(D.compSerie, 'NÚMERO DE SERIE')],
-      ['Sistema operativo:', campo(D.compSO, 'SISTEMA OPERATIVO Y VERSIÓN')],
-      ['Accesorios incluidos:', campo(D.compAccesorios, 'CARGADOR / MOUSE / MOCHILA / OTROS')],
-    ]),
-    sub('EQUIPO TELEFÓNICO:'),
-    kv([
-      ['Marca:', campo(D.telMarca, 'MARCA')],
-      ['Modelo:', campo(D.telModelo, 'MODELO')],
-      ['Número de serie:', campo(D.telSerie, 'NÚMERO DE SERIE / IMEI')],
-      ['Número asignado:', campo(D.telNumero, "NÚMERO TELEFÓNICO CORPORATIVO O 'NO APLICA'")],
-      ['Accesorios incluidos:', campo(D.telAccesorios, 'CARGADOR / FUNDA / OTROS')],
-    ]),
-    sub('OTROS EQUIPOS O HERRAMIENTAS ASIGNADAS:'),
-    kv([
-      ['Descripción:', campo(D.otro1, "DESCRIPCIÓN DEL BIEN, MARCA, SERIE — O 'NINGUNO'")],
-      ['Descripción:', campo(D.otro2, "DESCRIPCIÓN DEL BIEN, MARCA, SERIE — O 'NINGUNO'")],
-    ]),
+    ...bloquesEquipo,
 
     sub('USO CORRECTO DEL EQUIPO.'),
     pa([
       ra('El/La trabajador(a) se obliga a utilizar el equipo asignado exclusivamente para las actividades propias de su puesto, a mantenerlo en buen estado de conservación y a no instalar en el equipo de cómputo programas, aplicaciones o archivos no autorizados por '),
       campo(razon, 'NOMBRE O RAZÓN SOCIAL DEL PATRÓN'),
-      ra('. Asimismo, reconoce que el equipo de cómputo y el dispositivo telefónico son herramientas de trabajo de propiedad del patrón, y que su uso para actividades ajenas a las laborales constituye causa de rescisión sin responsabilidad para el patrón conforme al artículo 135, fracción IX de la Ley Federal del Trabajo.'),
+      ra('. Asimismo, reconoce que los bienes descritos son herramientas de trabajo de propiedad del patrón, y que su uso para actividades ajenas a las laborales constituye causa de rescisión sin responsabilidad para el patrón conforme al artículo 135, fracción IX de la Ley Federal del Trabajo.'),
     ]),
     sub('PROHIBICIÓN DE USO POR TERCEROS.'),
     pa([
