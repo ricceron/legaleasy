@@ -4,6 +4,8 @@ import { generarCapacitacion } from './capacitacion';
 import { generarObra } from './obra';
 import { generarAvisoPrivacidad } from './aviso';
 import { generarRenuncia } from './renuncia';
+import { generarResponsivaEquipo } from './responsiva-equipo';
+import { generarResponsivaVehiculo } from './responsiva-vehiculo';
 
 export type Generador = (datos: any) => Promise<Buffer>;
 
@@ -12,4 +14,6 @@ export const generadores: Record<string, Generador> = {
   obra: generarObra,
   aviso: generarAvisoPrivacidad,
   renuncia: generarRenuncia,
+  responsiva_equipo: generarResponsivaEquipo,
+  responsiva_vehiculo: generarResponsivaVehiculo,
 };

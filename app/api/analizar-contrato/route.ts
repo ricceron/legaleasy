@@ -4,6 +4,14 @@ export async function POST(req: NextRequest) {
   try {
     const { datos, tipo } = await req.json();
     const esRenuncia = /renuncia/i.test(tipo || '');
+    const esResponsiva = /responsiva/i.test(tipo || '');
+
+    const reglasResponsiva = `Revisa que esta CARTA RESPONSIVA de asignación de bienes (Arts. 134 fracc. VI y 135 fracc. IX LFT) sea sólida y completa:
+- IDENTIFICACIÓN DEL BIEN: el bien debe quedar plenamente identificado (marca, modelo, número de serie/IMEI/VIN, placas, etc., según el caso). Si faltan datos clave de identificación, márcalo "warn", porque un bien mal identificado debilita la responsiva.
+- PARTES: deben estar el patrón ("patronNombre"), el trabajador ("trabNombre") y el representante del patrón que entrega ("representante"). Si falta alguno, "warn".
+- CLÁUSULAS: la carta ya incluye uso correcto, prohibición de uso por terceros, responsabilidad por daños y obligación de devolución al término de la relación (esto es correcto, "ok").
+- FIRMAS: recuérdale (tipo "info") que la carta debe firmarse por AMBAS partes (quien recibe y quien entrega) y conservarse una copia; sin la firma del trabajador la responsiva pierde valor probatorio.
+- NO apliques reglas de jornada, salario mínimo ni edad: este documento no las contiene.`;
 
     const reglasContrato = `Revisa: edad del trabajador, formato RFC/CURP/NSS, salario vs SMV, jornada, actividades suficientes, vigencia correcta.
 
@@ -30,7 +38,7 @@ REGLAS DE JORNADA (Arts. 61, 63 y 64 LFT) — aplícalas con cuidado:
 Datos: ${JSON.stringify(datos)}
 SMV 2025: $248.93 MXN
 
-${esRenuncia ? reglasRenuncia : reglasContrato}
+${esRenuncia ? reglasRenuncia : esResponsiva ? reglasResponsiva : reglasContrato}
 
 JSON: {"puntaje":<0-100>,"observaciones":[{"tipo":"ok"|"warn"|"error"|"info","texto":"<texto con artículo LFT cuando aplique>"}],"recomendacion":"<una oración>"}
 Máximo 7 observaciones.`;
