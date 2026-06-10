@@ -81,12 +81,6 @@ export function FormFiniquito() {
     const diasVacPend = Number(g('diasVacPendientes')) || 0;
     const vacPendMonto = diasVacPend * SD;
     const primaVac = (vacMonto + vacPendMonto) * (primaP / 100);
-    // Vacaciones pendientes: el sistema propone 0, RH captura los días reales no disfrutados
-    const diasVacPend = Number(r2['diasVacPendientes'].current?.value || 0);
-    const vacPendMonto = diasVacPend * SD;
-    const primaVacPend = vacPendMonto * (primaP / 100);
-    const vacMonto = vacDias * SD;
-    const primaVac = vacMonto * (primaP / 100);
     const salariosPend = SD * (Number(g('diasSalariosPendientes')) || 0);
 
     const baseAntig = Math.min(SD, 2 * SMG);
