@@ -2,7 +2,7 @@
 
 export type Msg = { role: 'user' | 'assistant'; content: string };
 export type Section = 'lex' | 'docs' | 'historial' | 'config';
-export type DocTipo = 'capacitacion' | 'obra' | 'indeterminado' | 'prueba' | 'aviso' | 'renuncia' | 'responsiva_equipo' | 'responsiva_vehiculo' | null;
+export type DocTipo = 'capacitacion' | 'obra' | 'indeterminado' | 'prueba' | 'aviso' | 'renuncia' | 'responsiva_equipo' | 'responsiva_vehiculo' | 'finiquito' | null;
 
 export const V = '#39ff14';
 export const F = '#060f1e';

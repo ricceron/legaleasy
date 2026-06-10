@@ -5,6 +5,15 @@ export async function POST(req: NextRequest) {
     const { datos, tipo } = await req.json();
     const esRenuncia = /renuncia/i.test(tipo || '');
     const esResponsiva = /responsiva/i.test(tipo || '');
+    const esFiniquito = /finiquito|liquidaci/i.test(tipo || '');
+
+    const reglasFiniquito = `Revisa este documento de FINIQUITO / LIQUIDACIÓN. En "datos" vienen: causaLabel (causa de terminación), tipo ("finiquito" o "liquidacion"), antiguedadTxt, salarioDiario, sdi (salario diario integrado), conceptos[] (cada uno con label y monto) y total.
+- CLASIFICACIÓN: verifica que el tipo corresponda a la causa. Solo el despido injustificado y la rescisión por el trabajador con causa imputable al patrón (Art. 51) generan LIQUIDACIÓN (finiquito + indemnizaciones de los Arts. 48-50). Renuncia, mutuo acuerdo, conclusión de contrato y despido justificado generan solo FINIQUITO. Si no coincide, márcalo "error".
+- CONCEPTOS DEL FINIQUITO: deben incluirse salarios pendientes, aguinaldo proporcional (Art. 87), vacaciones proporcionales y prima vacacional (Arts. 76-80). Si falta alguno relevante, "warn".
+- PRIMA DE ANTIGÜEDAD (Art. 162): aplica en todo despido (justificado o no) y en renuncia con 15 o más años. Verifica su presencia o ausencia según el caso. Recuerda que su salario base tiene tope de 2× el salario mínimo.
+- LIQUIDACIÓN: debe incluir la indemnización de 3 meses (90 días × SDI, Art. 48). El concepto de 20 días por año (Art. 50-II) y los salarios vencidos dependen del caso concreto; coméntalos como "info".
+- RIESGOS (usa "warn"/"info"): si es despido injustificado, advierte el riesgo de salarios vencidos (tope 12 meses + intereses) y la conveniencia de ratificar el convenio ante el Centro de Conciliación Laboral para que tenga efectos de cosa juzgada (Arts. 33 y 987 LFT).
+- No apliques reglas de jornada. Calcula de forma aproximada para detectar montos incongruentes (por ejemplo, 3 meses = 90 × SDI), pero no recalcules con exactitud.`;
 
     const reglasResponsiva = `Revisa que esta CARTA RESPONSIVA de asignación de bienes (Arts. 134 fracc. VI y 135 fracc. IX LFT) sea sólida y completa:
 - IDENTIFICACIÓN DEL BIEN: el bien debe quedar plenamente identificado (marca, modelo, número de serie/IMEI/VIN, placas, etc., según el caso). Si faltan datos clave de identificación, márcalo "warn", porque un bien mal identificado debilita la responsiva.
@@ -38,7 +47,7 @@ REGLAS DE JORNADA (Arts. 61, 63 y 64 LFT) — aplícalas con cuidado:
 Datos: ${JSON.stringify(datos)}
 SMV 2025: $248.93 MXN
 
-${esRenuncia ? reglasRenuncia : esResponsiva ? reglasResponsiva : reglasContrato}
+${esRenuncia ? reglasRenuncia : esResponsiva ? reglasResponsiva : esFiniquito ? reglasFiniquito : reglasContrato}
 
 JSON: {"puntaje":<0-100>,"observaciones":[{"tipo":"ok"|"warn"|"error"|"info","texto":"<texto con artículo LFT cuando aplique>"}],"recomendacion":"<una oración>"}
 Máximo 7 observaciones.`;

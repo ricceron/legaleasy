@@ -8,6 +8,7 @@ import { generarResponsivaEquipo } from './responsiva-equipo';
 import { generarResponsivaVehiculo } from './responsiva-vehiculo';
 import { generarIndeterminado } from './indeterminado';
 import { generarPrueba } from './prueba';
+import { generarFiniquito } from './finiquito';
 
 export type Generador = (datos: any) => Promise<Buffer>;
 
@@ -20,4 +21,5 @@ export const generadores: Record<string, Generador> = {
   responsiva_vehiculo: generarResponsivaVehiculo,
   indeterminado: generarIndeterminado,
   prueba: generarPrueba,
+  finiquito: generarFiniquito,
 };
