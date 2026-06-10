@@ -25,7 +25,7 @@ export function FormFiniquito() {
   const [conceptos, setConceptos] = useState<any[] | null>(null);
   const [resumen, setResumen] = useState<any>(null);
 
-  const K = ['razonSocial','trabNombre','ciudad','representante','cargoRepresentante','causa','fechaIngreso','fechaBaja','fechaDocumento','salarioDiario','diasAguinaldo','primaPct','diasSalariosPendientes'];
+  const K = ['razonSocial','trabNombre','ciudad','representante','cargoRepresentante','causa','fechaIngreso','fechaBaja','fechaDocumento','salarioDiario','diasAguinaldo','primaPct','diasSalariosPendientes','diasVacPendientes'];
   const r2: any = {};
   K.forEach(k => { r2[k] = useRef<any>(null); });
 
@@ -74,7 +74,17 @@ export function FormFiniquito() {
 
     const ultAniv = new Date(di); ultAniv.setFullYear(di.getFullYear() + aniosCompletos);
     let diasDesdeAniv = Math.round((db.getTime() - ultAniv.getTime()) / msDay); if (diasDesdeAniv < 0) diasDesdeAniv = 0;
-    const vacDias = (vacAnio / 365) * diasDesdeAniv;
+    // Art. 78 LFT: al inicio de cada año el trabajador ya tiene derecho a los días del año que comienza.
+    const vacParaPeriodo = aniosCompletos > 0 ? vacacionesPorAnio(aniosCompletos + 1) : vacacionesPorAnio(1);
+    const vacDias = (vacParaPeriodo / 365) * diasDesdeAniv;
+    const vacMonto = vacDias * SD;
+    const diasVacPend = Number(g('diasVacPendientes')) || 0;
+    const vacPendMonto = diasVacPend * SD;
+    const primaVac = (vacMonto + vacPendMonto) * (primaP / 100);
+    // Vacaciones pendientes: el sistema propone 0, RH captura los días reales no disfrutados
+    const diasVacPend = Number(r2['diasVacPendientes'].current?.value || 0);
+    const vacPendMonto = diasVacPend * SD;
+    const primaVacPend = vacPendMonto * (primaP / 100);
     const vacMonto = vacDias * SD;
     const primaVac = vacMonto * (primaP / 100);
     const salariosPend = SD * (Number(g('diasSalariosPendientes')) || 0);
@@ -89,8 +99,9 @@ export function FormFiniquito() {
     const arr: any[] = [
       { k:'salarios', label:'Salarios pendientes', detalle:`${Number(g('diasSalariosPendientes'))||0} días × ${money(SD)}`, monto: salariosPend },
       { k:'aguinaldo', label:'Aguinaldo proporcional', detalle:`${diasAg} días/año · ${diasAnioAg} días del año`, monto: aguinaldoProp },
-      { k:'vacaciones', label:'Vacaciones proporcionales', detalle:`${vacDias.toFixed(1)} días (${vacAnio}/año)`, monto: vacMonto },
-      { k:'prima_vac', label:'Prima vacacional', detalle:`${primaP}% sobre vacaciones`, monto: primaVac },
+      { k:'vacaciones', label:'Vacaciones proporcionales', detalle:`${vacDias.toFixed(1)} días (${vacParaPeriodo}/año, año ${aniosCompletos+1})`, monto: vacMonto },
+      { k:'vac_pendientes', label:'Vacaciones pendientes (años anteriores)', detalle: diasVacPend > 0 ? `${diasVacPend} días × ${money(SD)}` : 'capturar días no disfrutados de años previos', monto: vacPendMonto },
+      { k:'prima_vac', label:'Prima vacacional', detalle:`${primaP}% sobre vacaciones (proporcionales + pendientes)`, monto: primaVac },
     ];
     if (aplicaPrimaAntig) arr.push({ k:'prima_antig', label:'Prima de antigüedad', detalle:`12 días × ${aniosFrac.toFixed(2)} años · tope 2× SMG`, monto: primaAntig });
     if (causaObj.liq) {
@@ -175,6 +186,7 @@ export function FormFiniquito() {
           <div style={fldSt}><label style={labSt}>Días de aguinaldo</label><input ref={r2.diasAguinaldo} type="number" defaultValue="15" style={inpSt}/></div>
           <div style={fldSt}><label style={labSt}>Prima vacacional %</label><input ref={r2.primaPct} type="number" defaultValue="25" style={inpSt}/></div>
         </div>
+        <div style={fldSt}><label style={labSt}>Días de vacaciones pendientes (años anteriores)</label><input ref={r2.diasVacPendientes} type="number" placeholder="0" style={inpSt}/><div style={{fontSize:11,color:'rgba(255,255,255,0.35)',marginTop:4}}>Días generados en años previos que el trabajador nunca disfrutó. Déjalo en 0 si no aplica; lo demás (vacaciones proporcionales) se calcula solo.</div></div>
         <div style={fldSt}><label style={labSt}>Fecha del documento</label><input ref={r2.fechaDocumento} type="date" style={inpSt}/></div>
 
         <button onClick={calcular} style={{width:'100%',background:'rgba(57,255,20,0.12)',color:V,border:'0.5px solid rgba(57,255,20,0.35)',borderRadius:10,padding:'12px 0',fontSize:13,fontWeight:800,cursor:'pointer',fontFamily:"'Sora',sans-serif",marginTop:4}}>🧮 Calcular {'\u2192'}</button>
