@@ -17,6 +17,7 @@ export default function LexByte() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [freeLeft, setFreeLeft] = useState(3);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:'smooth'});},[msgs]);
@@ -75,10 +76,22 @@ export default function LexByte() {
         input,select,textarea{font-family:'Sora',sans-serif!important}
         input::placeholder,textarea::placeholder{color:rgba(255,255,255,0.3)!important}
         select option{background:#0b1a2e;color:#fff}
+        .lb-hamburger{display:none}
+        .lb-overlay{display:none}
+        @media(max-width:820px){
+          .lb-sidebar{position:fixed!important;left:0;top:0;height:100vh!important;width:250px!important;z-index:60;transform:translateX(-100%);transition:transform .25s ease;box-shadow:2px 0 24px rgba(0,0,0,0.5)}
+          .lb-sidebar.open{transform:translateX(0)}
+          .lb-overlay{display:block;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:55;opacity:0;pointer-events:none;transition:opacity .2s}
+          .lb-overlay.open{opacity:1;pointer-events:auto}
+          .lb-hamburger{display:flex!important}
+          .lb-header{padding-left:14px!important;padding-right:14px!important}
+          .lb-freebadge{display:none!important}
+          .lb-title{font-size:15px!important}
+        }
       `}</style>
 
       <div style={{display:'flex',height:'100vh',background:F,fontFamily:"'Sora',sans-serif",overflow:'hidden'}}>
-        <div style={{width:230,flexShrink:0,background:SB,borderRight:'0.5px solid rgba(57,255,20,0.1)',display:'flex',flexDirection:'column',overflow:'hidden'}}>
+        <div className={`lb-sidebar${mobileOpen?' open':''}`} style={{width:230,flexShrink:0,background:SB,borderRight:'0.5px solid rgba(57,255,20,0.1)',display:'flex',flexDirection:'column',overflow:'hidden'}}>
           <div style={{padding:'20px 16px 16px',borderBottom:'0.5px solid rgba(57,255,20,0.08)'}}>
             <div style={{display:'flex',alignItems:'center',gap:10}}>
               <div style={{width:34,height:34,background:V,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:F,flexShrink:0}}>L</div>
@@ -90,7 +103,7 @@ export default function LexByte() {
           </div>
           <nav style={{flex:1,padding:'12px 8px'}}>
             {navItems.map(item=>(
-              <div key={item.id} className="nav-item" onClick={()=>{setSection(item.id as Section);setDocTipo(null);}}
+              <div key={item.id} className="nav-item" onClick={()=>{setSection(item.id as Section);setDocTipo(null);setMobileOpen(false);}}
                 style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',borderRadius:8,cursor:'pointer',fontSize:12.5,fontWeight:section===item.id?600:400,color:section===item.id?V:'rgba(255,255,255,0.4)',background:section===item.id?'rgba(57,255,20,0.07)':'transparent',borderLeft:`2px solid ${section===item.id?V:'transparent'}`,marginBottom:3,transition:'all 0.15s'}}>
                 <i className={`ti ${item.icon}`} style={{fontSize:16,flexShrink:0}} aria-hidden="true"/>{item.label}
               </div>
@@ -104,10 +117,14 @@ export default function LexByte() {
           </div>
         </div>
 
+        <div className={`lb-overlay${mobileOpen?' open':''}`} onClick={()=>setMobileOpen(false)}/>
+
         <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
-          <div style={{padding:'14px 22px',borderBottom:'0.5px solid rgba(57,255,20,0.08)',display:'flex',alignItems:'center',justifyContent:'space-between',background:F,flexShrink:0}}>
-            <div>
-              <div style={{fontWeight:700,fontSize:14,color:'#fff'}}>
+          <div className="lb-header" style={{padding:'14px 22px',borderBottom:'0.5px solid rgba(57,255,20,0.08)',display:'flex',alignItems:'center',justifyContent:'space-between',background:F,flexShrink:0}}>
+            <div style={{display:'flex',alignItems:'center',gap:12,minWidth:0}}>
+              <button className="lb-hamburger" onClick={()=>setMobileOpen(true)} aria-label="Abrir menú" style={{background:'transparent',border:'none',color:V,cursor:'pointer',fontSize:22,lineHeight:1,padding:0,alignItems:'center',justifyContent:'center',flexShrink:0}}>☰</button>
+              <div style={{minWidth:0}}>
+              <div className="lb-title" style={{fontWeight:700,fontSize:14,color:'#fff'}}>
                 {section==='lex'&&'Asistente Jurídico Lex'}
                 {section==='docs'&&(docTipo?(docTipo==='aviso'?'Aviso de Privacidad':docTipo==='renuncia'?'Carta de Renuncia Voluntaria':docTipo==='responsiva_equipo'?'Carta Responsiva de Equipo':docTipo==='responsiva_vehiculo'?'Carta Responsiva de Vehículo':docTipo==='finiquito'?'Finiquito / Liquidación':`Contrato — ${docTipo==='capacitacion'?'Capacitación Inicial':docTipo==='indeterminado'?'Tiempo Indeterminado':docTipo==='prueba'?'Periodo de Prueba':'Obra Determinada'}`):'Generador de Documentos')}
                 {section==='historial'&&'Historial de Documentos'}
@@ -120,9 +137,10 @@ export default function LexByte() {
                 {section==='config'&&'Datos de tu empresa y preferencias'}
               </div>
             </div>
+            </div>
             <div style={{display:'flex',alignItems:'center',gap:10}}>
               {docTipo&&<button onClick={()=>setDocTipo(null)} style={{background:'transparent',color:'rgba(255,255,255,0.4)',border:'0.5px solid rgba(255,255,255,0.1)',borderRadius:8,padding:'6px 14px',fontSize:12,cursor:'pointer',fontFamily:"'Sora',sans-serif"}}>← Documentos</button>}
-              <div style={{fontSize:10,background:'rgba(57,255,20,0.08)',border:'0.5px solid rgba(57,255,20,0.2)',color:V,padding:'4px 12px',borderRadius:20,fontWeight:600}}>{freeLeft} consultas gratis</div>
+              <div className="lb-freebadge" style={{fontSize:10,background:'rgba(57,255,20,0.08)',border:'0.5px solid rgba(57,255,20,0.2)',color:V,padding:'4px 12px',borderRadius:20,fontWeight:600}}>{freeLeft} consultas gratis</div>
               <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(57,255,20,0.1)',border:'0.5px solid rgba(57,255,20,0.25)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
                 <i className="ti ti-user" style={{fontSize:15,color:'rgba(255,255,255,0.5)'}} aria-hidden="true"/>
               </div>
