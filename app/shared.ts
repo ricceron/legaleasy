@@ -2,7 +2,7 @@
 
 export type Msg = { role: 'user' | 'assistant'; content: string };
 export type Section = 'lex' | 'docs' | 'historial' | 'config';
-export type DocTipo = 'capacitacion' | 'obra' | 'aviso' | 'renuncia' | 'responsiva_equipo' | 'responsiva_vehiculo' | null;
+export type DocTipo = 'capacitacion' | 'obra' | 'indeterminado' | 'aviso' | 'renuncia' | 'responsiva_equipo' | 'responsiva_vehiculo' | null;
 
 export const V = '#39ff14';
 export const F = '#060f1e';
@@ -86,6 +86,9 @@ export function validarPaso(paso: number, tipo: DocTipo, refs: any): ErrorMap {
       if (v(refs.condInicio) && v(refs.condTermino)) {
         if (new Date(v(refs.condTermino)) <= new Date(v(refs.condInicio))) errs.condTermino = 'La fecha de término debe ser posterior al inicio';
       }
+    }
+    if (tipo === 'indeterminado') {
+      if (!v(refs.condInicio)) errs.condInicio = 'Requerido';
     }
     if (!v(refs.condActividades)) errs.condActividades = 'Describe al menos una actividad del puesto';
   }

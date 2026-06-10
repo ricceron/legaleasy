@@ -50,7 +50,7 @@ export default function LexByte() {
     {id:'capacitacion',nombre:'Capacitación Inicial',base:'Art. 39-B LFT',ready:true,icon:'ti-file-check'},
     {id:'obra',nombre:'Obra Determinada',base:'Arts. 35-36 LFT',ready:true,icon:'ti-building'},
     {id:'aviso',nombre:'Aviso de Privacidad',base:'LFPDPPP',ready:true,icon:'ti-shield-lock'},
-    {id:'ind',nombre:'Tiempo Indeterminado',base:'Art. 35 LFT',ready:false,icon:'ti-file-text'},
+    {id:'indeterminado',nombre:'Tiempo Indeterminado',base:'Arts. 35 y 37 LFT',ready:true,icon:'ti-file-text'},
     {id:'acta',nombre:'Acta Administrativa',base:'Art. 47 LFT',ready:false,icon:'ti-scale'},
     {id:'renuncia',nombre:'Renuncia Voluntaria',base:'Art. 53 LFT',ready:true,icon:'ti-signature'},
     {id:'responsiva_equipo',nombre:'Responsiva de Equipo',base:'Arts. 134-VI, 135-IX LFT',ready:true,icon:'ti-device-laptop'},
@@ -108,7 +108,7 @@ export default function LexByte() {
             <div>
               <div style={{fontWeight:700,fontSize:14,color:'#fff'}}>
                 {section==='lex'&&'Asistente Jurídico Lex'}
-                {section==='docs'&&(docTipo?(docTipo==='aviso'?'Aviso de Privacidad':docTipo==='renuncia'?'Carta de Renuncia Voluntaria':docTipo==='responsiva_equipo'?'Carta Responsiva de Equipo':docTipo==='responsiva_vehiculo'?'Carta Responsiva de Vehículo':`Contrato — ${docTipo==='capacitacion'?'Capacitación Inicial':'Obra Determinada'}`):'Generador de Documentos')}
+                {section==='docs'&&(docTipo?(docTipo==='aviso'?'Aviso de Privacidad':docTipo==='renuncia'?'Carta de Renuncia Voluntaria':docTipo==='responsiva_equipo'?'Carta Responsiva de Equipo':docTipo==='responsiva_vehiculo'?'Carta Responsiva de Vehículo':`Contrato — ${docTipo==='capacitacion'?'Capacitación Inicial':docTipo==='indeterminado'?'Tiempo Indeterminado':'Obra Determinada'}`):'Generador de Documentos')}
                 {section==='historial'&&'Historial de Documentos'}
                 {section==='config'&&'Configuración'}
               </div>
@@ -174,7 +174,7 @@ export default function LexByte() {
           {section==='docs'&&docTipo==='renuncia'&&<FormRenuncia key="renuncia"/>}
           {section==='docs'&&docTipo==='responsiva_equipo'&&<FormResponsivaEquipo key="req"/>}
           {section==='docs'&&docTipo==='responsiva_vehiculo'&&<FormResponsivaVehiculo key="rveh"/>}
-          {section==='docs'&&(docTipo==='capacitacion'||docTipo==='obra')&&<FormContrato key={docTipo} tipo={docTipo}/>}
+          {section==='docs'&&(docTipo==='capacitacion'||docTipo==='obra'||docTipo==='indeterminado')&&<FormContrato key={docTipo} tipo={docTipo}/>}
 
           {section==='historial'&&<div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:12}}><i className="ti ti-folder-open" style={{fontSize:44,color:'rgba(57,255,20,0.2)'}} aria-hidden="true"/><div style={{fontWeight:600,fontSize:14,color:'rgba(255,255,255,0.4)'}}>Sin documentos aún</div><div style={{fontSize:12,color:'rgba(255,255,255,0.25)'}}>Los contratos generados aparecerán aquí</div></div>}
 

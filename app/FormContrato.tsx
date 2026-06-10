@@ -186,7 +186,7 @@ export function FormContrato({ tipo }: { tipo: DocTipo }) {
     try {
       const res = await fetch('/api/analizar-contrato', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo: tipo==='capacitacion'?'Capacitación Inicial':'Obra Determinada', datos: getDatos() }),
+        body: JSON.stringify({ tipo: tipo==='capacitacion'?'Capacitación Inicial':tipo==='indeterminado'?'Tiempo Indeterminado':'Obra Determinada', datos: getDatos() }),
       });
       const data = await res.json();
       setAnalisis(data);
@@ -305,6 +305,10 @@ export function FormContrato({ tipo }: { tipo: DocTipo }) {
           {tipo==='obra'&&<>
             <div style={fldSt}><label style={labSt}>Jefe inmediato</label><input ref={refs.condJefe} placeholder="Ing. Juan López — Director de Obra" style={inpSt('')}/></div>
             <div style={fldSt}><label style={labSt}>Fecha de inicio *</label><input ref={refs.condInicio} type="date" style={inpSt('condInicio')}/><ErrMsg campo="condInicio"/></div>
+          </>}
+          {tipo==='indeterminado'&&<>
+            <div style={fldSt}><label style={labSt}>Jefe inmediato</label><input ref={refs.condJefe} placeholder="Lic. Ana Ruiz — Gerente de Ventas" style={inpSt('')}/></div>
+            <div style={fldSt}><label style={labSt}>Fecha de ingreso *</label><input ref={refs.condInicio} type="date" style={inpSt('condInicio')}/><ErrMsg campo="condInicio"/></div>
           </>}
           <div style={rowSt}>
             <div style={fldSt}><label style={labSt}>Salario diario MXN * (mín. $248.93)</label><input ref={refs.condSalario} type="number" placeholder="350.00" step="0.01" style={inpSt('condSalario')}/><ErrMsg campo="condSalario"/></div>
