@@ -2,7 +2,7 @@
 
 export type Msg = { role: 'user' | 'assistant'; content: string };
 export type Section = 'lex' | 'docs' | 'historial' | 'config';
-export type DocTipo = 'capacitacion' | 'obra' | 'indeterminado' | 'aviso' | 'renuncia' | 'responsiva_equipo' | 'responsiva_vehiculo' | null;
+export type DocTipo = 'capacitacion' | 'obra' | 'indeterminado' | 'prueba' | 'aviso' | 'renuncia' | 'responsiva_equipo' | 'responsiva_vehiculo' | null;
 
 export const V = '#39ff14';
 export const F = '#060f1e';
@@ -88,6 +88,9 @@ export function validarPaso(paso: number, tipo: DocTipo, refs: any): ErrorMap {
       }
     }
     if (tipo === 'indeterminado') {
+      if (!v(refs.condInicio)) errs.condInicio = 'Requerido';
+    }
+    if (tipo === 'prueba') {
       if (!v(refs.condInicio)) errs.condInicio = 'Requerido';
     }
     if (!v(refs.condActividades)) errs.condActividades = 'Describe al menos una actividad del puesto';

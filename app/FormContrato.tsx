@@ -186,7 +186,7 @@ export function FormContrato({ tipo }: { tipo: DocTipo }) {
     try {
       const res = await fetch('/api/analizar-contrato', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo: tipo==='capacitacion'?'Capacitación Inicial':tipo==='indeterminado'?'Tiempo Indeterminado':'Obra Determinada', datos: getDatos() }),
+        body: JSON.stringify({ tipo: tipo==='capacitacion'?'Capacitación Inicial':tipo==='indeterminado'?'Tiempo Indeterminado':tipo==='prueba'?'Periodo de Prueba':'Obra Determinada', datos: getDatos() }),
       });
       const data = await res.json();
       setAnalisis(data);
@@ -309,6 +309,14 @@ export function FormContrato({ tipo }: { tipo: DocTipo }) {
           {tipo==='indeterminado'&&<>
             <div style={fldSt}><label style={labSt}>Jefe inmediato</label><input ref={refs.condJefe} placeholder="Lic. Ana Ruiz — Gerente de Ventas" style={inpSt('')}/></div>
             <div style={fldSt}><label style={labSt}>Fecha de ingreso *</label><input ref={refs.condInicio} type="date" style={inpSt('condInicio')}/><ErrMsg campo="condInicio"/></div>
+          </>}
+          {tipo==='prueba'&&<>
+            <div style={fldSt}><label style={labSt}>Evaluador / Jefe inmediato</label><input ref={refs.condJefe} placeholder="Lic. Ana Ruiz — Gerente de Ventas" style={inpSt('')}/></div>
+            <div style={rowSt}>
+              <div style={fldSt}><label style={labSt}>Duración del periodo de prueba</label><select ref={refs.duracion} style={inpSt('')} defaultValue="30"><option value="30">30 días</option><option value="60">60 días</option><option value="90">90 días</option></select></div>
+              <div style={fldSt}><label style={labSt}>Fecha de inicio *</label><input ref={refs.condInicio} type="date" style={inpSt('condInicio')}/><ErrMsg campo="condInicio"/></div>
+            </div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.35)',marginTop:-6}}>La fecha de término se calcula sola. Nota: más de 30 días solo aplica a puestos de dirección, gerenciales, técnicos o profesionales especializados (Art. 39-A LFT).</div>
           </>}
           <div style={rowSt}>
             <div style={fldSt}><label style={labSt}>Salario diario MXN * (mín. $248.93)</label><input ref={refs.condSalario} type="number" placeholder="350.00" step="0.01" style={inpSt('condSalario')}/><ErrMsg campo="condSalario"/></div>
